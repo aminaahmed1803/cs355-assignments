@@ -1,0 +1,37 @@
+random checks for a pseudo-random sequence of allocs/frees. 
+
+The following performance rests were run with timeout set to 15 seconds:
+random 0 100 0
+random 0 1000 1
+random 0 100000 1
+random 0 500000 1
+random 0 2000000 0
+
+In addition, we conducted a number of correctness tests. Following are short descriptions of what each test checks for:
+
+        align           check for 8-byte alignment
+        align2          do multiple alignments and check for 8-byte alignment
+        align3          do multiple odd-sized allocations and check for 8-byte alignment
+        alloc           simple 8-byte allocation
+        alloc2          a few aligned allocations
+        alloc3          several odd-sized allocations
+        badinit         bad args to Mem_Init - 0
+        badinit2        (same) - negative integer
+        worstfit        use worstfit policy for space allocation
+        coalesce        check for coalesce of free space
+        coalesce2       (same)
+        coalesce3       (same)
+        coalesce4       same, but check that there's no space left
+        coalesce5       same, but different pointer freed
+        coalesce6       same, but check for header size free
+        doubleinit      call init twice
+        free            simple allocation and free
+        free2           aligned allocation and free
+        free3           odd-sized allocation and free
+        init            initialize with size of 1 page
+        init2           initialize and round up to 1 page
+        nospace         no space left to allocate
+        nullfree        try to free a NULL pointer
+        writeable       check that memory can be written to after allocation
+
+
