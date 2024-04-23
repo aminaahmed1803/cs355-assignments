@@ -1,0 +1,60 @@
+NAME:
+=====
+	Amina Ahmed
+
+Known Bugs:
+===========
+	random_alloc.c fails when number of operation gets too high (around 200)
+       
+Design Details:
+================
+typedef struct _head {
+    uint32_t free;       // 4 bytes
+    uint32_t size;       // memory size
+    struct _head *next;  // 8 bytes 
+    struct _head *prev;  // 8 bytes
+    struct _head *next_free;  // 8 bytes
+} HEAD;
+
+The free variable is free if it is set to 1 and 0 otherwise
+The size variable contains the total size of the chunk
+next and prev are there to make the list of memory chunks (allocated and free) doubly linked
+The next_free pointer points to the next smallest chunk of free memory. This is just to link free chunks together in descending order. 
+
+There are two lists: all_memory which is a doubly linked list of allocated and free chunks as they are present in memory
+					 free_head which is a singly linked list of all the free chunks. Every time an allocated chunk is freed, it is added to this list.
+
+					Initially both lists just containe the memory that is requested when Mem_innit is called
+					Whenever Mem_Alloc is called, and memory is allocated, the huge intial chunk of memory is fragmented
+					Since in free_head, the memory chunks are in descending order, its takes O(1) to retrieve the worst fit fragment. 
+
+					Every time a chunk if freed
+					if coalesc is zero, it is inserted to the free_head list based on its chunk size
+					if coalesc is one, the all_memory list and free_head are reset
+					if coalesc is two, a free node in free_head is chosen and then coalesced with the chunks next to it. 
+					
+
+Implementation Details
+======================
+I expect Mem_Alloc, Mem_innit and Mem_free to work fine. 
+Note Mem_free doesn't check validity of the adress of the pointer passed to it.
+
+Test Suite:
+===========
+alignment.c - assigns random non eight bit aligned memory and then calls mem_dump to ensure all memory chunks are eight bit aligned
+coalesc_list.c - fragments the memory and then caolescs with parameter 1
+coalesc_zone.c - fragments the memory and then caolescs with parameter 2
+coalesc_all_fragments.c - fragments the meory into chunks of various sizes with some free and some not. After that it caolescs with parameter 1
+free_null.c - ensures the NULL memory is a valid parameter for Mem_free
+invalid_args_meminnit.c - ensures that meminnit is robust against invalid arguments
+no_space.c - ensures that mem_alloc can not allocate space infinitely and stays within the predefined bound
+random_alloc.c - taken from shared tests, randomly allocates, uses and frees memory
+simple_read_write.c - tests if allocated memory can be writted to and read from
+two_mil_coalesc.c  - allocates two million chunks of memory and frees them intermitently with varying coalesc (0, 1, 2) parameters
+two_mil.c - allocates two million chunks of memory and writes to them
+
+Other comments:
+===============
+	Joooooooooon HIIIIIIII
+	OS assignments always take so long to debug... zzz 
+   

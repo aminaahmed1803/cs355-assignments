@@ -1,0 +1,60 @@
+NAME:
+=====
+	Amina Ahmed
+
+Programs Files:
+===============
+    Part 1:
+        (a) hw1a.c
+        (b) hw1b.c
+    Part 2:
+         microcat.c
+	
+How to Compile:
+===============
+    Part 1:
+        (a) make hw1a
+        (b) make hw1b
+    Part 2:
+         make microcat
+       
+How to Run:
+===========
+    Part 1:
+        (a) ./hw1a
+        (b) ./hw1b -s <seconds>
+    Part 2:
+            ./microcat <filename1> <filename2> ... <filenameN>
+            ./microcat -
+            ./microcat <filename1> <filename2> ... <filenameN> -
+
+Summary of Features and EC completed
+=====================================
+    all features specified for part 1, part 2 and 
+    extra credit (a) have been implemented.
+
+File directory:
+=========================
+    hw1a.c                         : hmw part 1
+    hw1b.c                         : hmw part 1 
+    microcat.c                     : hmw part 2 
+    README                         : - 
+    Makefile                       : makefile for compiling
+    file1.txt, file2.txt, file3.txt: random data file
+
+I Worked With:
+==============
+    Grace
+
+Approximate Hours worked:
+=========================
+    10 hrs
+
+
+Known Bugs or Limitations:
+==========================
+    N/A
+
+Other comments:
+===============
+    

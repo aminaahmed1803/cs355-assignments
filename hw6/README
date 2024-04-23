@@ -1,0 +1,10 @@
+Name
+=======
+    Amina Ahmed
+
+Implementation Details
+=======================
+    I believe I Implementated everything correctly and there are no memeory errors.
+    I did implement double and triple indirect blocks but they resulted in seg faults and I didnt
+    have enough time to debug them so I removed them. 
+    My file output matches with the one that everyone uploaded to git

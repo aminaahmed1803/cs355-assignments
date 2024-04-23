@@ -1,0 +1,47 @@
+NAME:
+=====
+        Amina Ahmed
+
+Programs Files:
+===============
+    Part 1:
+         matrix.c
+    Part 2:
+         mysh.c
+
+How to Compile:
+===============
+    Part 1:
+         make matrix        
+    Part 2:
+         make mysh
+
+How to Run:
+===========
+    Part 1:
+         ./matrix
+    Part 2:
+         ./mysh
+
+Summary of Features and EC completed
+=====================================
+    all features specified for part 1, and part 2
+    part 2 has some memory issues
+
+
+I Worked With:
+==============
+    Grace
+
+Approximate Hours worked:
+=========================
+    15 hrs
+
+
+Known Bugs or Limitations:
+==========================
+    After mysh finishes executing, part of the heap is stil in use (heap is not fully free)
+    However, there are no memory errors
+
+Other comments:
+===============

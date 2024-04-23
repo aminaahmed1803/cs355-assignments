@@ -1,0 +1,29 @@
+NAME:
+=====
+	Amina Ahmed
+	
+IMPLEMENTATION DETAILS:
+===========
+    Implemented FIFO
+    Implemented SJF with extra credit 
+    Implemented PRIORITY with extra credit 
+    implemented Scheduler Logging for all three option
+    did not impement ticks in FIFO and SJP because timer isn't used in either of those for scheduling
+
+    valgrind reveals no memory errors but there are some leaks. some memory is "still reachable.
+    priority threads stop executing after a certain number of threads. i think this is because of the signal handler and timer. it needs more debugging
+
+
+TEST SUITE
+==========================
+1. hello_thread.c - this is a simple start program to show that all options work at the very least
+2. premept_thread.c - this is to test the premption implemented in SJP and FIFO
+3. test_three_threads_sjf.c - this shows that the shortest jobs are scheduled first. I used victors test case since it was pretty good. 
+4. test_invalid.c - for all policies, this tests if they do well to handle all kinds of invalid requests. This is built further upon one of the shared test cases
+5. thread_yield.c - for all policies, this ensures that the yield function works as expected. 
+6. test_quantum.c - for FIFO, this shows that when a thread takes longer than its given quantum, its priority is decreased and quantum is increased.
+7. priority_stress.c - this launches processes with different priorities. the userthread_log_txt should display that they all run with the threads with higher priority running more often than others. (this test does not pass due to the signal error in priorty)
+8. sjf_stress.c - this launches three different jobs that take different times and ensures that exp. aging is used to schedule them in the correct order. 
+9. random_join.c - this test ensures the proper working of the join regardless of the order of the threads. 
+10. test_priority.c - this ensures that tasks are executed in order of their priority
+11. test_logging.c - this ensures that the logging works for each policy 
