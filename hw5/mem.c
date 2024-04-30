@@ -4,8 +4,6 @@
 #include "mem.h"
 
 long request_size;
-unsigned long used; // user requested mem
-unsigned long real_used; /*used + overhead*/
 void *region;
 int m_error = INITIALIZE;
 HEAD *all_memory;
@@ -19,8 +17,6 @@ int Mem_Init(long sizeOfRegion){
         return FAIL;
     }
     
-    used = INITIALIZE;
-    real_used = HEADER_SIZE;
     long page_size = getpagesize();
     request_size = ((sizeOfRegion + sizeof(HEAD) + page_size - 1) / page_size) * page_size; // revist 
     region = mmap(NULL, request_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
@@ -74,11 +70,6 @@ void remove_node(HEAD **head, HEAD *node){
     tmp->next_free = tmp->next_free->next_free;
 }
 
-HEAD *find_worst_fit(){
-    
-    return free_head;
-}
-
 void *fragment_memory(HEAD * memory_block, long size_requested){
 
     int leftover_size = memory_block->size - size_requested;
@@ -92,20 +83,18 @@ void *fragment_memory(HEAD * memory_block, long size_requested){
     memory_block->next = frag;
     memory_block->size = leftover_size;
     
-    
     void *ptr = (void *)(frag + 1);
     return ptr;
 }   
 
 void *Mem_Alloc(long size){
     
-    
     if (size <= 0 || all_memory == NULL) { 
         m_error = E_BAD_ARGS;
         return NULL;
     }
     uint32_t new_size = (uint32_t) (eight_byte_align(size) + HEADER_SIZE);
-    HEAD *worstFit = find_worst_fit();
+    HEAD *worstFit = free_head;
     void *ptr = NULL;
 
     if (worstFit==NULL || worstFit->size < new_size){
@@ -126,7 +115,6 @@ void *Mem_Alloc(long size){
     return ptr;
 }
 
-//coalesce is 1, coalesce the entire list and wherever possible
 //coalesce is 1, coalesce the entire list and wherever possible
 int coalesce_list(HEAD **mem_block){
 
@@ -159,35 +147,51 @@ int coalesce_list(HEAD **mem_block){
 //when coalesce is 2, coalesce a local neighberhood whose size is upto you
 int coalesce_zone(HEAD **mem_block){
 
-    HEAD  *tmp = free_head;
-    HEAD *zone = NULL;
-    while (tmp != NULL){
-        if (tmp->next->free == TRUE){
-            zone = tmp;
-            remove_node(&free_head, zone);
-            zone->next_free = FALSE;
-            break;
-        }
-        
-        tmp = tmp->next_free;
-    }
-
-    if (zone == NULL){ // there are no zones
+    if (*mem_block == NULL || (*mem_block)->free == FALSE){
         return SUCCESS;
     }
 
-    while (zone->next != NULL && zone->next->free == TRUE ){
-        HEAD *next = zone->next;
-        remove_node(&free_head, next);
-        next->next_free = NULL;
-        zone->size += next->size;
-        zone->next = next->next;
-        void *header = (void *)next;
+    if ((*mem_block)->prev->free == FALSE && (*mem_block)->next->free == FALSE ){
+        return SUCCESS;
     }
+
+    remove_node(&free_head, *mem_block);
+    HEAD *zone_list = *mem_block;
+    HEAD *start = *mem_block;
+    HEAD *end = *mem_block;
     
-    insert_node(&free_head, zone);
-    return SUCCESS;
- 
+
+    while (start->prev->free == TRUE){
+        HEAD *tmp = start->prev;
+        remove_node(&free_head, tmp);
+        start = tmp->prev;
+    }
+
+    while (end->next->free == TRUE){
+        HEAD *tmp = end->next;
+        remove_node(&free_head, tmp);
+        end = tmp->next;
+    }
+
+    uint32_t size = start->size; 
+    HEAD *next = end->next;  
+    HEAD *prev = start->prev; 
+    HEAD *coalesced = start;
+
+    while (start != end){
+        HEAD *tmp = start->next;
+        size += tmp->size;
+        void *recase = (void *)start;
+        start = tmp;
+    }
+
+    coalesced = (HEAD *)coalesced;
+    coalesced->size = size;
+    coalesced->next = next; 
+    coalesced->prev = prev; 
+    coalesced->free = TRUE; 
+
+    return SUCCESS; 
 }
 
 // we cheat and don't free anything
