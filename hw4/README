@@ -5,13 +5,8 @@ NAME:
 IMPLEMENTATION DETAILS:
 ===========
     Implemented FIFO
-    Implemented SJF with extra credit 
-    Implemented PRIORITY with extra credit 
-    implemented Scheduler Logging for all three option
-    did not impement ticks in FIFO and SJP because timer isn't used in either of those for scheduling
-
-    valgrind reveals no memory errors but there are some leaks. some memory is "still reachable.
-    priority threads stop executing after a certain number of threads. i think this is because of the signal handler and timer. it needs more debugging
+    Implemented SJF 
+    Implemented PRIORITY
 
 
 TEST SUITE
@@ -27,3 +22,39 @@ TEST SUITE
 9. random_join.c - this test ensures the proper working of the join regardless of the order of the threads. 
 10. test_priority.c - this ensures that tasks are executed in order of their priority
 11. test_logging.c - this ensures that the logging works for each policy 
+
+
+
+
+
+Here are some short descriptions of what the tests are supposed to check:
+
+ 0 fcfs - PASSED
+ 1 fcfs - PASSED
+ 2 fcfs - PASSED
+ 3 fcfs - PASSED
+ 4 fcfs - PASSED
+ 5 fcfs - PASSED
+ 6 fcfs -                   FAILED
+ 7 fcfs - PASSED
+ 8 fcfs -                   FAILED
+ 9 fcfs - PASSED
+ 10 fcfs -                  FAILED
+ 11 fcfs - PASSED
+ 12 fcfs -                  FAILED
+ 13 fcfs -                  FAILED
+ 14 fcfs - PASSED
+ 15 fcfs - PASSED
+ 18 fcfs - PASSED
+ 19 fcfs -                  FAILED
+test_nested_fifo - PASSED
+
+
+ 16 sjf - PASSED
+ 17 sjf - 
+ 20 sjf - 
+ 21 sjf - PASSED
+ 22 sjf -
+ 23 sjf - 
+ test_nested_sjf - PASSED
+ test_sjf_yield - 
