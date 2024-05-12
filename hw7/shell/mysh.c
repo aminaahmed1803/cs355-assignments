@@ -129,6 +129,68 @@ int builtin_cmd_handler(char** command) {
         return SUCCESS;
     }
 
+    if (strcmp(command[0], "ls") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    /*chmod changes the permissions mode of a file. 
+    Support absolute mode and symbolic mode.*/
+    if (strcmp(command[0], "chmod") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    /*mkdir creates a directory*/
+    if (strcmp(command[0], "mkdir") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    /*rmdir removes a directory*/
+    if (strcmp(command[0], "rmdir") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    /*cd changes the current working directory 
+    according to the specified path, or to the 
+    home directory if no argument is given. 
+    Support . and ..  */
+    if (strcmp(command[0], "cd") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    //pwd prints the current working directory
+    if (strcmp(command[0], "pwd") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    //cat displays the content of one or more files to the output.
+    if (strcmp(command[0], "cat") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    //more lists a file a screen at a time
+    if (strcmp(command[0], "more") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    //rm deletes a file
+    if (strcmp(command[0], "rm") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    /*mount mounts a file system at a specified 
+    location.  Note that it should be possible to 
+    format multiple disks and mount them at 
+    arbitrary locations in your file system */
+    if (strcmp(command[0], "mount") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+    // umount unmounts a file system
+    if (strcmp(command[0], "umount") == 0) {
+        //TODO
+        return SUCCESS;
+    }
+
     return FAIL;
 }
 
