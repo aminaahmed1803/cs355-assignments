@@ -3,12 +3,18 @@
 #include "common.h"
 #include "mem.h"
 
-long request_size;
+long real_size;
+long requested; 
+long total_allocd;
 void *region;
 int m_error = INITIALIZE;
 HEAD *all_memory;
 HEAD *free_head;
 
+
+long eight_byte_align(long x){
+    return (x + ALIGN) & ~ALIGN;
+}
 
 int Mem_Init(long sizeOfRegion){
     
@@ -16,29 +22,28 @@ int Mem_Init(long sizeOfRegion){
         m_error = E_BAD_ARGS;
         return FAIL;
     }
-    
+
     long page_size = getpagesize();
-    request_size = ((sizeOfRegion + sizeof(HEAD) + page_size - 1) / page_size) * page_size; // revist 
-    region = mmap(NULL, request_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+    real_size = ((sizeOfRegion + sizeof(HEAD) + page_size - 1) / page_size) * page_size; // revist 
+    region = mmap(NULL, real_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
     if (region == MAP_FAILED) {
         return FAIL; 
     }
 
-    region = memset(region, 0xaa, request_size);
+    requested = eight_byte_align(sizeOfRegion);
+    total_allocd = 0;
+
+    region = memset(region, 0xaa, real_size);
     //printf("size req:%ld", request_size);
     all_memory = (HEAD*)region;
     all_memory->prev = NULL;
     all_memory->next = NULL;
     all_memory->next_free = NULL;
     all_memory->free = TRUE;       
-    all_memory->size = request_size - HEADER_SIZE;
+    all_memory->size = real_size - HEADER_SIZE;
 
     free_head = all_memory;
     return SUCCESS;
-}
-
-long eight_byte_align(long x){
-    return (x + ALIGN) & ~ALIGN;
 }
 
 void insert_node(HEAD **head, HEAD *node){
@@ -94,6 +99,8 @@ void *Mem_Alloc(long size){
         return NULL;
     }
     uint32_t new_size = (uint32_t) (eight_byte_align(size) + HEADER_SIZE);
+
+
     HEAD *worstFit = free_head;
     void *ptr = NULL;
 
@@ -101,17 +108,20 @@ void *Mem_Alloc(long size){
         m_error = E_NO_SPACE;
         return NULL;
     }
+
     int leftover_space = worstFit->size - new_size; 
     if (leftover_space >= MIN_SIZE){ // here
+        total_allocd += new_size;
         ptr = fragment_memory(worstFit, new_size);
     } 
     else { // changed here
+        total_allocd += worstFit->size;
         worstFit->free = FALSE;
         remove_node(&free_head, worstFit);
         // remove this node from free list
         ptr = (void*)(worstFit + 1 );
     }
-
+    
     return ptr;
 }
 
@@ -122,24 +132,33 @@ int coalesce_list(HEAD **mem_block){
         return SUCCESS;
     }
 
-    (*mem_block)->next_free = NULL;
+    free_head = NULL;
+    HEAD *start = *mem_block;
 
-    if ((*mem_block)->free == TRUE && (*mem_block)->next->free == TRUE){
-        HEAD *tmp = (*mem_block)->next;
-        (*mem_block)->size += (*mem_block)->next->size;
-        (*mem_block)->next = (*mem_block)->next->next;
-        void *header = (void *)tmp;
+    while (start->next != NULL){
+        start->next_free = NULL;
+        if (start->free == TRUE && start->next->free == TRUE){
+            HEAD *tmp = start->next;
+            start->size += tmp->size;
+            start->next = tmp->next;
+            void *recase = (void *)tmp;
+            
+        }else{
+            start = start->next;
+        }
 
-        return coalesce_list(mem_block);
-        //printf("both are free\n");
     }
 
-    if ((*mem_block)->free == TRUE){
-        //(*mem_block)->next_free = NULL;
-        insert_node(&free_head, *mem_block);
+    start = *mem_block;
+
+    while (start != NULL){
+        if (start->free == TRUE){
+            insert_node(&free_head, start);
+        }
+        start = start->next;
     }
-    return coalesce_list( &((*mem_block)->next) );
-    
+
+    return SUCCESS;    
 }
 
 
@@ -203,6 +222,7 @@ int Mem_Free(void *ptr, int coalesce){
         mem_block->free = TRUE;
         mem_block->next_free = NULL;
         insert_node(&free_head, mem_block);
+        total_allocd -= mem_block->size;
     }
     switch (coalesce){
         case 0:

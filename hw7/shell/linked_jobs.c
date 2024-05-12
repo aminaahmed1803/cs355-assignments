@@ -16,11 +16,10 @@
  *      free_list()
  *      free_node()
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "linked_jobs.h"
+#include "common.h"
 int global_job_id = 1;
 
 /*

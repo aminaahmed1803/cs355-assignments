@@ -460,39 +460,40 @@ int writeable() {
 
 int main(){
     
-    //align();
-    //align2();
-    //align3();
+   //align();
+   //align2();
+   //align3();
 
-    //alloc();
-    //alloc2();
-    //alloc3();
+   //alloc();
+   //alloc2();
+   //alloc3();
 
-    //badinit();
-    //badinit2();
+   //badinit();
+   //badinit2();
 
-   // worstfit(); //FAILED
+   //worstfit(); //FAILED
 
-    //coalesce();
-    //coalesce2();
-    //coalesce3();
-    //coalesce4();
-    //coalesce5(); 
-    //coalesce6(); 
+   //coalesce();
+   //coalesce2();
+   //coalesce3();
+   //coalesce4();
+   //coalesce5(); 
+   coalesce6(); //FAILED
+ 
+   //doubleinit();
+   //badinit2();
 
-    //doubleinit();
-    //badinit2();
+   //free1();
+   //free2();
+   //free3();
 
-    //free1();
-    //free2();
-    //free3();
+   //init();
+   //init2();
 
-    //init();
-    //init2();
-
-    nospace();
-    //nullfree();
-    //writeable();
+   //nospace(); FAILED
+   //nospace2();
+   //nullfree();
+   //writeable();
 
     exit(0);
 }

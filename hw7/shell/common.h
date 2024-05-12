@@ -1,23 +1,35 @@
-/*
- * linked_jobs.h
- *
- * Description:
- * This program is a header file containing the components that make up
- * a doubly linked list for a list of jobs. This includes a job struct and
- * respective functions for a doubly linked list of jobs.
- */
+#ifndef COMMON_H
+#define COMMON_H
 
-#ifndef LINKED_JOBS_H
-#define LINKED_JOBS_H
-#include <sys/types.h> 
-#include <stdbool.h>
 #include <termios.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+#include <signal.h>
+#include <pwd.h>
+#include <glob.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 
 #define RUN "running"
 #define SUSP "suspended"
 #define CONT "continued"
 #define FIN "done"
 #define TER "terminated"
+
+#define SUCCESS 0
+#define FAIL -1
+
+#define TOKEN_DELIMITERS "&%<>"
+#define COMMAND_DELIMITERS "\n\0;|"
+#define MAXLEN 100
+#define COMMAND_BUFSIZE 1024
 
 typedef enum status {
     RUNNING,
@@ -41,6 +53,21 @@ typedef struct job{
     bool termios_set;
 } JOB;
 
+
+int total_jobs;
+int num_jobs = 1;
+char * line;
+char ***commands;
+pid_t shell_pid;
+
+JOB *head;
+JOB *foreground_job;
+sigset_t blocked;
+struct termios main_termios;
+
+char *read_line();
+char ***parse_command(char *line, int *num_commands);
+
 void display_jobs_list(JOB* head);
 void display_job_node(JOB* node);
 void insert_at_end(JOB** head, JOB* new_node);
@@ -53,5 +80,12 @@ void free_list(JOB** head);
 JOB* get_last_SUSPENDED(JOB* head);
 void free_node(JOB* job);
 
+void check_zombie();
+
+void exiting();
+int bg(char **command);
+int fg(char **command);
+int kill_job(char** command);
+
+
 #endif
-                

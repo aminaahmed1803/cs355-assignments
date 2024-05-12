@@ -1,10 +1,9 @@
-/*
-random 0 100 0
+/*random 0 100 0
 random 0 1000 1
 random 0 100000 1
 random 0 500000 1
-random 0 2000000 0
-*/
+random 0 2000000 0*/
+
 #include <assert.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -71,43 +70,40 @@ int main(int argc, char* argv[]) {
     slot = random() % max_allocs;
     doAlloc = random() % 4;
     //doWrite = writeData;
-    
+
     if (!doAlloc || ptr[slot] != NULL) {
-      assert(Mem_Free(ptr[slot], 1) == 0);
-      //assert(Mem_Free(ptr[slot], 2) == 0);
+      //assert(Mem_Free(ptr[slot], 1) == 0);
+      assert(Mem_Free(ptr[slot], 2) == 0);
       free(shadow[slot]);
       ptr[slot] = NULL;
       shadow[slot] = NULL;
     }
 
-    //printf("Iteration %lld\n", i);
-    //Mem_Dump();
     if (doAlloc) {
-      size[slot] = min_alloc_size + (random() % (max_alloc_size - min_alloc_size + 1));
+      size[slot] = min_alloc_size +
+	(random() % (max_alloc_size - min_alloc_size + 1));
       ptr[slot] = Mem_Alloc(size[slot]);
       assert(ptr[slot] != NULL);
       if (writeData) {
-        shadow[slot] = malloc(size[slot]);
-	      int j;
-	      for (j=0; j<size[slot]; j++) {
-	        char data = random();
-	        *((char*)(ptr[slot] + j)) = data;
-	        *((char*)(shadow[slot] + j)) = data;
-	      }
+	shadow[slot] = malloc(size[slot]);
+	int j;
+	for (j=0; j<size[slot]; j++) {
+	  char data = random();
+	  *((char*)(ptr[slot] + j)) = data;
+	  *((char*)(shadow[slot] + j)) = data;
+	}
       }
     }
-    
   }
-  //assert(Mem_Free(NULL, 1) == 0);
   
   if (writeData) {
     for (slot=0; slot<max_allocs; slot++) {
       if (ptr[slot] != NULL) {
-	      assert(memcmp(ptr[slot], shadow[slot], size[slot]) == 0);
+	assert(memcmp(ptr[slot], shadow[slot], size[slot]) == 0);
       }
     }
   }
- 
+
   
   exit(0);
 }

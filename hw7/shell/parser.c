@@ -10,7 +10,7 @@
  *      get_command()
  */
 
-#include "parser.h"
+#include "common.h"
 
 char *trim_string(char *line) {
     if (line == NULL){

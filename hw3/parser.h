@@ -1,3 +1,11 @@
+/*
+ * parser.h
+ *
+ * Description:
+ * This program is a header file containing the components that make up
+ * the parser functionalities.
+ */
+
 #ifndef PARSER_H
 #define PARSER_H
 

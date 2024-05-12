@@ -1,5 +1,37 @@
-#hw3 tests
+NAME:
+=====
+    Amina Ahmed
 
+Programs Files:
+===============
+    mysh.c parser.c linked_jobs.c
+
+How to Compile:
+===============
+    make myshell
+
+How to Run:
+===========
+    ./myshell
+
+Summary of Features and EC completed
+=====================================
+    implemented all features as specified except ctrl d
+
+
+I Worked With:
+==============
+    Grace
+
+Known Bugs or Limitations:
+==========================
+    ctrl-d does not work and prints [myshell]$ infinitely when pressed. 
+    needs to be killed with an external kill command
+
+Test Results:
+==============
+
+#ctrl d has issues, everything else passes with no memory issues
 ctrl-c 
 ctrl-d
 invalid command
@@ -8,10 +40,12 @@ ctrl-c foreground child
 ctrl-d foreground child
 quit foreground child
 
+#passes with no memory issues
 ps;ls;cat
 ;;
 ls; ;ls
 
+#passes - fg doesnt work with valgrind
 sleep 10
 ctrl-z
 fg
@@ -20,6 +54,7 @@ fg
 ctrl-z
 fg
 
+#passes - fg doesnt work with valgrind
 sleep 10 &
 fg
 ctrl-z
@@ -28,38 +63,47 @@ fg
 ctrl-z
 bg
 
-
+#passes with no memory issues
 sleep 5 &
 jobs
 
+#passes - fg doesnt work with valgrind
 emacs -nw &
 jobs
 fg
 
+#passes - fg doesnt work with valgrind
 cat &
 jobs
 fg
 
+#passes - fg doesnt work with valgrind
 man man 
 ctrl-z
 jobs
 fg
 
+#passes with no memory issues
 p 10 
 ctrl-z
 jobs
 bg
 jobs
 
+#passes with no memory issues
 p 10& p 8& p 4&
 
+#passes - fg doesnt work with valgrind
 fg/bg/kill of numbered jobs
 
+#passes with no memory issues
 Test many jobs (cut and paste one of the following into the shell: sleep might be less chaotic)
 sleep 100&sleep 99&sleep 98&sleep 97&sleep 96&sleep 95&sleep 94&sleep 93&sleep 92&sleep 91&sleep 90&sleep 89&sleep 88&sleep 87&sleep 86&sleep 85&sleep 84&sleep 83&sleep 82&sleep 81&sleep 80&sleep 79&sleep 78&sleep 77&sleep 76&sleep 75&sleep 74&sleep 73&sleep 72&sleep 71&sleep 70&sleep 69&sleep 68&sleep 67&sleep 66&sleep 65&sleep 64&sleep 63&sleep 62&sleep 61&
 
+#passes with no memory issues
 p 100&p 99&p 98&p 97&p 96&p 95&p 94&p 93&p 92&p 91&p 90&p 89&p 88&p 87&p 86&p 85&p 84&p 83&p 82&p 81&p 80&p 79&p 78&p 77&p 76&p 75&p 74&p 73&p 72&p 71&p 70&p 69&p 68&p 67&p 66&p 65&p 64&p 63&p 62&p 61&
 
+#not implemented
 extra credits:
 Pipe:
 ls | head -5
@@ -70,48 +114,3 @@ ls -F | grep -v / | wc -l
 ls -l | more
 
 Memory leaks and errors
-
-
-I wrote the results next to the code prompt:
-ctrl-c foreground child
-ctrl-d foreground child
-quit foreground child
-
-
-ctrl-z // Does nothing
-fg // Gives seg fault
-ctrl-z
-fg
-ctrl-z
-fg
-
-sleep 10 & // Good
-fg
-ctrl-z
-bg // Gives seg fault
-fg
-ctrl-z
-bg
-
-
-
-emacs -nw &
-jobs
-fg
-
-cat & // Prints the myshell prompt twice (?)
-jobs
-fg
-
-man man // Good
-ctrl-z
-jobs
-fg
-
-p 10 // Does nothing
-ctrl-z
-jobs
-bg
-jobs
-
-p 10& p 8& p 4& // Exits out of myshell
