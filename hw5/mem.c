@@ -4,13 +4,12 @@
 #include "mem.h"
 
 long real_size;
-long requested; 
+long intial_request; 
 long total_allocd;
 void *region;
 int m_error = INITIALIZE;
 HEAD *all_memory;
 HEAD *free_head;
-
 
 long eight_byte_align(long x){
     return (x + ALIGN) & ~ALIGN;
@@ -30,7 +29,7 @@ int Mem_Init(long sizeOfRegion){
         return FAIL; 
     }
 
-    requested = eight_byte_align(sizeOfRegion);
+    intial_request = eight_byte_align(sizeOfRegion);
     total_allocd = 0;
 
     region = memset(region, 0xaa, real_size);
@@ -100,6 +99,10 @@ void *Mem_Alloc(long size){
     }
     uint32_t new_size = (uint32_t) (eight_byte_align(size) + HEADER_SIZE);
 
+    if (total_allocd + size >= intial_request){
+        m_error = E_NO_SPACE;
+        return NULL;
+    }
 
     HEAD *worstFit = free_head;
     void *ptr = NULL;
@@ -109,13 +112,13 @@ void *Mem_Alloc(long size){
         return NULL;
     }
 
+    total_allocd += size;
+
     int leftover_space = worstFit->size - new_size; 
     if (leftover_space >= MIN_SIZE){ // here
-        total_allocd += new_size;
         ptr = fragment_memory(worstFit, new_size);
     } 
     else { // changed here
-        total_allocd += worstFit->size;
         worstFit->free = FALSE;
         remove_node(&free_head, worstFit);
         // remove this node from free list
@@ -128,6 +131,8 @@ void *Mem_Alloc(long size){
 //coalesce is 1, coalesce the entire list and wherever possible
 int coalesce_list(HEAD **mem_block){
 
+    total_allocd = 0;
+    
     if (*mem_block == NULL || (*mem_block)->next == NULL){
         return SUCCESS;
     }
@@ -154,6 +159,8 @@ int coalesce_list(HEAD **mem_block){
     while (start != NULL){
         if (start->free == TRUE){
             insert_node(&free_head, start);
+        }else{
+            total_allocd += start->size;
         }
         start = start->next;
     }

@@ -1,14 +1,11 @@
-correctness: 25/25 20x4 = 80
+correctness: 20/25 20x4 = 80
 performance: 1/5 1x5 = 5
-Testing: 10/10
-
+Testing: 8/10
 Total: 93/135
-
 # hw5 testsuite
 aahmed1
 
 Tests Included:
-
 1. alignment.c 
 2. coalesc_list.c
 3. coalesc_zone.c
@@ -20,5 +17,4 @@ Tests Included:
 9. simple_read_write.c
 10. two_mil_coalesc.c
 11. two_mil.c
-
 - Tests are thoroughly documented in readme.
