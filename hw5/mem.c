@@ -6,10 +6,12 @@
 long real_size;
 long intial_request; 
 long total_allocd;
+long frag_free;
 void *region;
 int m_error = INITIALIZE;
 HEAD *all_memory;
 HEAD *free_head;
+
 
 long eight_byte_align(long x){
     return (x + ALIGN) & ~ALIGN;
@@ -31,6 +33,7 @@ int Mem_Init(long sizeOfRegion){
 
     intial_request = eight_byte_align(sizeOfRegion);
     total_allocd = 0;
+    frag_free = intial_request;
 
     region = memset(region, 0xaa, real_size);
     //printf("size req:%ld", request_size);
@@ -99,7 +102,7 @@ void *Mem_Alloc(long size){
     }
     uint32_t new_size = (uint32_t) (eight_byte_align(size) + HEADER_SIZE);
 
-    if (total_allocd + size >= intial_request){
+    if (total_allocd + size > intial_request){
         m_error = E_NO_SPACE;
         return NULL;
     }
@@ -155,6 +158,7 @@ int coalesce_list(HEAD **mem_block){
     }
 
     start = *mem_block;
+    
 
     while (start != NULL){
         if (start->free == TRUE){
@@ -173,7 +177,7 @@ int coalesce_list(HEAD **mem_block){
 //when coalesce is 2, coalesce a local neighberhood whose size is upto you
 int coalesce_zone(HEAD **mem_block){
 
-    if (*mem_block == NULL || (*mem_block)->free == FALSE){
+    /*if (*mem_block == NULL || (*mem_block)->free == FALSE){
         return SUCCESS;
     }
 
@@ -217,6 +221,43 @@ int coalesce_zone(HEAD **mem_block){
     coalesced->prev = prev; 
     coalesced->free = TRUE; 
 
+    return SUCCESS; */
+
+    total_allocd = 0;
+    
+    if (*mem_block == NULL || (*mem_block)->next == NULL){
+        return SUCCESS;
+    }
+
+    free_head = NULL;
+    HEAD *start = *mem_block;
+
+    while (start->next != NULL){
+        start->next_free = NULL;
+        if (start->free == TRUE && start->next->free == TRUE){
+            HEAD *tmp = start->next;
+            start->size += tmp->size;
+            start->next = tmp->next;
+            void *recase = (void *)tmp;
+            
+        }else{
+            start = start->next;
+        }
+
+    }
+
+    start = *mem_block;
+    
+
+    while (start != NULL){
+        if (start->free == TRUE){
+            insert_node(&free_head, start);
+        }else{
+            total_allocd += start->size;
+        }
+        start = start->next;
+    }
+
     return SUCCESS; 
 }
 
@@ -233,6 +274,9 @@ int Mem_Free(void *ptr, int coalesce){
     }
     switch (coalesce){
         case 0:
+            if (ptr != NULL){
+                frag_free -= mem_block->size;
+            }
             return SUCCESS;
 
         case 1: 
@@ -240,8 +284,12 @@ int Mem_Free(void *ptr, int coalesce){
             return coalesce_list(&all_memory);
 
         case 2: 
-            return coalesce_zone(&mem_block);
-
+            if (ptr != NULL){
+                return coalesce_zone(&mem_block);
+            }else {
+                return coalesce_zone(&all_memory);
+            }
+            
         default:
             m_error = E_BAD_ARGS;
             return FAIL;

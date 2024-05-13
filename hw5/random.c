@@ -80,14 +80,13 @@ int main(int argc, char* argv[]) {
     }
 
     if (doAlloc) {
-      size[slot] = min_alloc_size +
-	(random() % (max_alloc_size - min_alloc_size + 1));
+      size[slot] = min_alloc_size + (random() % (max_alloc_size - min_alloc_size + 1));
       ptr[slot] = Mem_Alloc(size[slot]);
       assert(ptr[slot] != NULL);
       if (writeData) {
-	shadow[slot] = malloc(size[slot]);
-	int j;
-	for (j=0; j<size[slot]; j++) {
+	      shadow[slot] = malloc(size[slot]);
+	      int j;
+	      for (j=0; j<size[slot]; j++) {
 	  char data = random();
 	  *((char*)(ptr[slot] + j)) = data;
 	  *((char*)(shadow[slot] + j)) = data;
