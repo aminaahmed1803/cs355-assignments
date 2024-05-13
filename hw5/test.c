@@ -178,8 +178,6 @@ int coalesce4() {
    assert(m_error == E_NO_SPACE);
    assert(Mem_Free(ptr[2], 0) == 0);
    assert(Mem_Free(ptr[1], 0) == 0);
-
-   Mem_Dump();
    ptr[2] = Mem_Alloc(1600);
    assert(ptr[2] == NULL);
    assert(m_error == E_NO_SPACE);
@@ -358,29 +356,29 @@ int writeable() {
 int main(){
 
    //align();
-    //align2();
-    //align3();
-    //alloc();
-    //alloc2();
-    //alloc3();
-    //badinit();
-    //badinit2();
-    //worstfit(); //FAILED
-    //coalesce();
-    //coalesce2();
-    //coalesce3();
-    //coalesce4(); //FAILED
-    //coalesce5(); 
-    //coalesce6(); 
-    //doubleinit();
-    //badinit2();
-    //free1();
-    //free2();
-    //free3();
-    //init();
-    //init2();
-    //nospace(); 
-    //nullfree();
-    //writeable();
+   //align2();
+   //align3();
+   //alloc();
+   //alloc2();
+   //alloc3();
+   //badinit();
+   //badinit2();
+   //worstfit(); 
+   //coalesce();
+   //coalesce2();
+   //coalesce3();
+   //coalesce4(); 
+   //coalesce5(); 
+   //coalesce6(); 
+   //doubleinit();
+   //badinit2();
+   //free1();
+   //free2();
+   //free3();
+   //init();
+   //init2();
+   //nospace(); 
+   //nullfree();
+   writeable();
     exit(0);
 }

@@ -25,7 +25,8 @@ int Mem_Init(long sizeOfRegion){
     }
 
     long page_size = getpagesize();
-    real_size = ((sizeOfRegion + sizeof(HEAD) + page_size - 1) / page_size) * page_size; // revist 
+    real_size = ((sizeOfRegion + sizeof(HEAD) + page_size - 1) / page_size) * page_size /2; // revist 
+    
     region = mmap(NULL, real_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
     if (region == MAP_FAILED) {
         return FAIL; 

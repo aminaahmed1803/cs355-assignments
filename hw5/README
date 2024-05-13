@@ -53,36 +53,5 @@ simple_read_write.c - tests if allocated memory can be writted to and read from
 two_mil_coalesc.c  - allocates two million chunks of memory and frees them intermitently with varying coalesc (0, 1, 2) parameters
 two_mil.c - allocates two million chunks of memory and writes to them
 
-Tests:
+Test Results:
 ===========
-align           
-align2          
-align3          
-
-alloc          
-alloc2          
-alloc3          
-
-badinit         
-badinit2        
-worstfit        
-
-coalesce        
-coalesce2       
-coalesce3       
-coalesce4       
-coalesce5       
-coalesce6  
-
-doubleinit      
-		
-free            
-free2          
-free3          
-        
-init            
-init2           
-        
-nospace       
-nullfree       
-writeable       
