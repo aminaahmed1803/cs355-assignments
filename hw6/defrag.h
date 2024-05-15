@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 #include <string.h>
 
 #define N_DBLOCKS 10
@@ -14,6 +15,10 @@
 #define INODESIZE
 #define N_INODES 
 #define OFFSET 1024
+#define END -1 
+#define TRUE 1
+#define FALSE 0
+#define FREE_SIZE block_size - 4 
 
 typedef struct superblock {
   int size; /* size of blocks in bytes */
@@ -39,6 +44,15 @@ typedef struct inode {
   int i2block; /* pointer to doubly indirect block */
   int i3block; /* pointer to triply indirect block */
 } inode;
+
+struct datablock {
+    char *data; 
+};
+
+struct freeblock {
+    int next;
+    char *junk;
+};
 
 #undef INODESIZE
 #define INODESIZE sizeof(inode)
