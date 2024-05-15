@@ -13,7 +13,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <string.h>
 #include <sys/time.h>
+#include </usr/include/valgrind/valgrind.h>
 
 #define ALPHA 0.5
 #define AVERAGE_BURST 1000

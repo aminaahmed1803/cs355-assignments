@@ -5,15 +5,13 @@
 
 typedef struct sjf_thread_control_block{
 	pid_t tid;
+	pid_t waiting_tid;
 	ucontext_t context;
-	
 	int state;
 	long runtime;
-
 	void (*start_function) (void *); 	
 	void *args; 				
 	void *return_value; 	
-
     struct sjf_thread_control_block *next;
 
 } sjf;

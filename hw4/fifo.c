@@ -1,30 +1,31 @@
 #include "fifo.h"
 
-
 typedef struct {
 	int threads_num;
 	fifo *main_thread;
 	fifo *running;
 	fifo *ready;
 	fifo *zombie;
+	fifo *waiting;
 	int logger;
 } LIB;
 
 LIB *library;
 static bool innit = false;
 
+
 void  fifo_enqueue(fifo **head, fifo *node){
    
-   if (*head == NULL) {
-      node->next = NULL;
-      *head = node;
-      return;
-   }
+    if (*head == NULL) {
+    	node->next = NULL;
+    	*head = node;
+    	return;
+   	}
 
-   fifo *tmp = *head;
-   while (tmp->next != NULL) {
-      tmp = tmp->next;
-   }
+    fifo *tmp = *head;
+   	while (tmp->next != NULL && tmp->next->tid < node->tid) {
+    	tmp = tmp->next;
+   	}
 
    tmp->next = node;
    node->next = NULL;
@@ -58,13 +59,57 @@ void fifo_display(fifo *head){
    }
 }
 
+bool fifo_search(fifo *head, pid_t tid ){
+   	if (head == NULL) {
+    	return NULL;
+   	}
 
-fifo * fifo_search(fifo **head, pid_t tid ){
+  	fifo *tmp = NULL;
+  	tmp = head;
+   	while (tmp != NULL) {  
+      
+		if (tmp->tid == tid) {
+			return true;
+      	}
+      	
+		tmp = tmp->next;
+    }
+
+   return NULL;
+}
+
+fifo * fifo_return_waiting(fifo **head, pid_t waiting_tid ){
    if (head == NULL) {
       return NULL;
    }
 
-  fifo *tmp = *head;
+  fifo *tmp = NULL;
+  tmp = *head;
+  fifo *prev = NULL;
+   while (tmp != NULL) {  
+      if (tmp->waiting_tid == waiting_tid) {
+         if (prev != NULL) {
+            prev->next = tmp->next;
+         } else {
+            *head = (*head)->next;;
+         }
+         return tmp;
+      }
+      prev = tmp;
+      tmp = tmp->next;
+    }
+
+   return NULL;
+}
+
+
+fifo * fifo_return(fifo **head, pid_t tid ){
+   if (head == NULL) {
+      return NULL;
+   }
+
+  fifo *tmp = NULL;
+  tmp = *head;
   fifo *prev = NULL;
    while (tmp != NULL) {  
       if (tmp->tid == tid) {
@@ -96,7 +141,10 @@ void fifo_terminate(fifo **head){
       current = current->next;
 
       free(tmp->context.uc_stack.ss_sp);
+	  tmp->context.uc_stack.ss_sp=NULL;
+	  
       free(tmp);
+	  tmp = NULL;
    }
 
    *head = NULL;
@@ -124,6 +172,7 @@ static void log_status(fifo *node, char *operation){
     }
 
     char buffer[1024];
+	memset(buffer,INITIALIZE_VALUE,1024);
     int len = snprintf(buffer, sizeof(buffer), "[000]\t%s\t%d\t-\n", operation, node->tid);
 
     if (write(library->logger, buffer, len) != len) {
@@ -150,8 +199,10 @@ static int thread_exit(void *return_value){
 	} 
 	log_status(current, "FINISHED");
 
+	fifo *next = fifo_return_waiting(&library->waiting, current->tid);
 
-	fifo *next = fifo_dequeue(&library->ready);
+	if (next == NULL) next = fifo_dequeue(&library->ready);
+
 	if (next == NULL){
 		library->running = library->main_thread;
 		library->main_thread->state = RUNNING;
@@ -186,12 +237,15 @@ int fifo_libinit(int policy){
 	fifo *main_thread = (fifo*)malloc(sizeof(fifo));
 	if (main_thread == NULL){ 
 		free(library);
+		library=NULL;
 		return FAILURE; 
 	}
 
 	if (logger_innit() == -1) {
 		free(library);
 		free(main_thread);
+		library=NULL;
+		main_thread=NULL;
 		return FAILURE; 
 	}
 
@@ -203,7 +257,11 @@ int fifo_libinit(int policy){
 	getcontext(&main_thread->context);
 	
 	library->main_thread = main_thread;
-	library->running = main_thread;
+	library->running = library->main_thread;
+	library->waiting = NULL;
+
+	library->ready = NULL;
+	library->zombie = NULL;
 
 	return EXIT_SUCCESS;
 }
@@ -219,6 +277,7 @@ int fifo_create(void (*func)(void *), void *arg, int priority){
 	}
 
 	new_thread->tid = library->threads_num++;
+	new_thread->waiting_tid = -1;
 	new_thread->start_function = func;
 	new_thread->args =  arg;
 	new_thread->return_value =  NULL;
@@ -229,19 +288,12 @@ int fifo_create(void (*func)(void *), void *arg, int priority){
 	new_thread->context.uc_stack.ss_size = STACKSIZE;
 	new_thread->context.uc_stack.ss_flags = 0;
 	makecontext(&new_thread->context, (void (*) (void)) stub_function, 2, func, arg);
+
+
 	// if there is no thread scheduled, then schedule this thread
 	log_status(new_thread, "CREATED");
 
-	if (library->running == library->main_thread){
-		new_thread->state = RUNNING;
-		log_status(new_thread, "SCHEDULED");
-		library->running = new_thread;
-		swapcontext(&library->main_thread->context, &new_thread->context);
-	}
-	else {
-		fifo_enqueue(&library->ready, new_thread);
-	}
-		
+	fifo_enqueue(&library->ready, new_thread);	
 	return new_thread->tid;
 }
 
@@ -254,7 +306,7 @@ int fifo_yield(void){
 	fifo *next = fifo_dequeue(&library->ready);
 
 	if (next == NULL){
-		next = library->main_thread;
+		return EXIT_SUCCESS;
 	}
 
 	if (current->state == RUNNING) {
@@ -276,37 +328,53 @@ int fifo_yield(void){
 
 }
 
-
 int fifo_join(int tid){
 
 	if(!innit) return FAILURE; 
+	
 
-	if ( fifo_search(&library->zombie, tid) != NULL){
+	if (fifo_search(library->zombie, tid)){
 		return EXIT_SUCCESS;
 	}
 	
-	fifo *to_be_joined = fifo_search(&library->ready, tid);
+	bool join = fifo_search(library->ready, tid);
+	
 
-	if (tid == 0 || library->running->tid == tid || to_be_joined == NULL) {
-		return FAILURE;
+	if (tid == 0 || library->running->tid == tid || !join){
+		if (library->running == library->main_thread){ //if it does not exist but current thread is main thread call yeild 
+			fifo_yield();
+		}
+		return FAILURE; // if it does not exist and current thread is not main thread 
 	}
+
+	if (library->running == library->main_thread){ //if it exists but current thread is main thread call yeild 
+		return fifo_yield();
+	}
+
+	// if it exits and current thread is not main put current thread behind it and call yeild
 	
 	fifo *current = library->running;
-	
+	current->waiting_tid = tid;
+	fifo_enqueue(&library->waiting, current);
+
 	if (current->state == RUNNING) {
 		library->running->state = READY;
-		if (current != library->main_thread){
-			fifo_enqueue_at_head(&library->ready, current);
-			log_status(current, "STOPPED");
-		}
 	} else {
 		return FAILURE;
 	}
 
-	to_be_joined->state = RUNNING;
-	library->running = to_be_joined;
-	log_status(to_be_joined, "SCHEDULED");
-	swapcontext(&current->context, &to_be_joined->context);
+	log_status(current, "STOPPED"); 
+	fifo *next = fifo_dequeue(&library->ready);
+
+	if (next == NULL){
+		return FAILURE;
+	}
+
+	next->state = RUNNING;	
+	library->running = next;
+	log_status(next, "SCHEDULED");
+	
+	swapcontext(&current->context, &next->context);
 
 	return EXIT_SUCCESS;
 }
@@ -318,9 +386,18 @@ int fifo_libterminate(void){
 		return FAILURE;
 	}
 
-	fifo_terminate(&library->main_thread);
+	//fifo_terminate(&library->main_thread);
+	free(library->main_thread);
+	library->main_thread=NULL;
+
 	fifo_terminate(&library->zombie);
+	library->zombie=NULL;
+
 	free(library);
+	library=NULL;
+
 	innit = false;
 	return EXIT_SUCCESS;
 }
+
+

@@ -11,4 +11,4 @@ userthread: userthread.c fifo.c sjf.c
 	$(CC) -g -Wall -Wvla  userthread.c fifo.c sjf.c  -o $@ -lm
 
 clean:
-	fifo userthread
+	rm userthread

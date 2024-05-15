@@ -1,14 +1,15 @@
-#include "rr_thread.h"
-#include "queue.h"
+#include <stdint.h>
+#include <stdio.h>
+#include "priority.h"
 
 typedef struct {
 	int threads_num;
-	RR_TCB *main_thread;
-	RR_TCB *running;
-	RR_TCB *ready_one;
-    RR_TCB *ready_zero;
-    RR_TCB *ready_neg_one;
-	RR_TCB *zombie;
+	priority *main_thread;
+	priority *running;
+	priority *ready_one;
+    priority *ready_zero;
+    priority *ready_neg_one;
+	priority *zombie;
 	int logger;
 	unsigned long ticks;
 } thread_library;
@@ -22,6 +23,156 @@ static struct sigaction old_act;
 static thread_library *thread_lib;
 static bool innit = false;
 
+void rr_enqueue(priority **head,priority *node){
+   
+   if (*head == NULL) {
+      node->next = NULL;
+      *head = node;
+      return;
+   }
+
+  priority *tmp = *head;
+   while (tmp->next != NULL) {
+      tmp = tmp->next;
+   }
+
+   tmp->next = node;
+   node->next = NULL;
+}
+
+priority * rr_dequeue(priority **head){
+   if (*head == NULL) {
+      return NULL;
+   }
+
+  priority *tmp = *head;
+  *head = (*head)->next;
+  tmp->next = NULL;
+   return tmp;
+}
+
+void rr_queue_display(priority *head){
+  priority *tmp = head;
+
+    while (tmp != NULL) {
+        printf("[%d]\t%d\t%d\t%d\n", 0, tmp->state, tmp->tid, tmp->priority);
+        tmp = tmp->next;
+    }
+}
+
+priority * rr_queue_search(priority **head, pid_t tid ){
+
+   priority *tmp = *head;
+   priority *prev = NULL;
+    // If the head node itself holds the key to be deleted
+   if (tmp != NULL && tmp->tid == tid) {
+        *head = tmp->next;
+        return tmp;
+   }
+
+    // Search for the key to be deleted, keep track of the previous node as well
+   while (tmp != NULL && tmp->tid != tid) {
+      prev = tmp;
+      tmp = tmp->next;
+   }
+
+    // If the key was not present in the linked list
+   if (tmp == NULL)
+      return NULL;
+
+    // Unlink the node from the linked list
+   prev->next = tmp->next;
+   return tmp;
+}
+
+void rr_queue_terminate(priority **head){
+   
+   if (*head == NULL) {
+      return;
+   }
+
+  priority *current = *head;
+  priority *tmp;
+   while (current != NULL) {
+      tmp = current;
+      current = current->next;
+      free(tmp->context.uc_stack.ss_sp);
+      free(tmp);
+   }
+
+   *head = NULL;
+}
+
+
+priority * pick_priority(priority *neg_one,priority *zero,priority* one){
+	int weights[3];
+   int total_sum = 0;
+
+   if (neg_one == NULL) total_sum += 0; 
+   else total_sum += NEG_WEIGHT;
+   weights[0] = total_sum;
+
+   if (zero == NULL) total_sum += 0; 
+   else total_sum += ZERO_WEIGHT;
+   weights[1] = total_sum;
+
+   if (one == NULL) total_sum += 0; 
+   else total_sum += ONE_WEIGHT;
+   weights[2] = total_sum;
+
+   if (total_sum == 0 ) return NULL;
+
+   float randNum = (float) rand() / RAND_MAX;
+   float target =  randNum * (total_sum);
+
+
+   if (target < weights[0]){
+      return rr_dequeue(&neg_one);
+   }
+   else if (target < weights[1]){
+    
+      return rr_dequeue(&zero);
+   }
+   else if (target < weights[2]){
+      return rr_dequeue(&one);
+   }
+   return NULL;
+}
+
+unsigned long rr_get_elapsed_time(priority *node){
+   struct timeval current_time;
+    gettimeofday(&current_time, NULL);
+
+    // Calculate the time difference in milliseconds
+   unsigned long elapsed_ms = (current_time.tv_sec - node->start_time.tv_sec) * MILLISEC;
+   elapsed_ms += (current_time.tv_usec - node->start_time.tv_usec) / MILLISEC;
+   return elapsed_ms;
+}
+
+
+int rr_priority_enque(priority *node, priority **ready_one, priority **ready_zero, priority **ready_neg_one){
+
+	if (node == NULL) {
+		return FAILURE;
+	}
+	switch (node->priority){
+		case 1:
+			rr_enqueue(ready_one, node);	
+			break;
+		case 0:
+			rr_enqueue(ready_zero, node);
+			break;
+		case -1:
+			rr_enqueue(ready_neg_one, node);
+			break;
+		default:
+			//free(*node->context.uc_stack.ss_sp);
+			//free(*node);
+			return FAILURE;
+	}
+	return EXIT_SUCCESS;
+}
+
 static int logger_innit(){
 	if(!innit) return FAILURE; 
 
@@ -33,7 +184,7 @@ static int logger_innit(){
 	return EXIT_SUCCESS;
 }
 
-static void log_TCB(RR_TCB *node, char *operation){
+static void log_TCB(priority *node, char *operation){
 	if(!innit) return; 
 
 	thread_lib->logger = open("userthread_log.txt", O_WRONLY|O_APPEND, 0644);
@@ -124,7 +275,7 @@ int rr_thread_libinit(int policy){
 
 	set_timer(INTERVAL);
 
-	RR_TCB *main_thread = (RR_TCB*)malloc(sizeof(RR_TCB)); // start main thread
+	priority *main_thread = (priority*)malloc(sizeof(priority)); // start main thread
 	if (main_thread == NULL){ 
 		free(thread_lib);
 		return FAILURE; 
@@ -168,7 +319,7 @@ int rr_thread_create(void (*func)(void *), void *arg, int priority){
 
 	sigprocmask(SIG_BLOCK, &block_alarm, NULL);
 
-	RR_TCB *new_thread = (RR_TCB*)malloc(sizeof(RR_TCB));
+	priority *new_thread = (priority*)malloc(sizeof(priority));
 	if (new_thread == NULL){ 
 		return FAILURE; 
 	}
@@ -202,8 +353,8 @@ int rr_thread_yield(void){
 	// mask signals here 
 	sigprocmask(SIG_BLOCK, &block_alarm, NULL);
 	
-	RR_TCB *curr_thread = thread_lib->running;
-	RR_TCB *next_thread = rr_pick_priority(thread_lib->ready_neg_one, thread_lib->ready_zero, thread_lib->ready_one);
+	priority *curr_thread = thread_lib->running;
+	priority *next_thread = rr_pick_priority(thread_lib->ready_neg_one, thread_lib->ready_zero, thread_lib->ready_one);
 
 	if (next_thread == NULL){
 		return EXIT_SUCCESS;
@@ -244,7 +395,7 @@ int rr_thread_join(int tid){
 	if ( rr_queue_search(&thread_lib->zombie, tid) != NULL){
 		return EXIT_SUCCESS;
 	}
-	RR_TCB *to_be_joined;
+	priority *to_be_joined;
 	sigprocmask(SIG_BLOCK, &block_alarm, NULL);
 
 	to_be_joined = rr_queue_search(&thread_lib->ready_one, tid);
@@ -259,7 +410,7 @@ int rr_thread_join(int tid){
 		return FAILURE;
 	}
 	
-	RR_TCB *curr_thread = thread_lib->running;
+	priority *curr_thread = thread_lib->running;
 
 	//set_timer(INITIALIZE_VALUE); // stop timer 
 

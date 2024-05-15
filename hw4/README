@@ -22,31 +22,35 @@ TEST SUITE
 9. random_join.c - this test ensures the proper working of the join regardless of the order of the threads. 
 10. test_priority.c - this ensures that tasks are executed in order of their priority
 11. test_logging.c - this ensures that the logging works for each policy 
-
-
-
-
+12. 
+13. 
+14. 
+15. 
+16. 
+17. 
+18.
+19. 
+20. 
 
 Here are some short descriptions of what the tests are supposed to check:
-
  0 fcfs - PASSED
  1 fcfs - PASSED
  2 fcfs - PASSED
- 3 fcfs - PASSED
+ 3 fcfs - PASSED                  
  4 fcfs - PASSED
  5 fcfs - PASSED
- 6 fcfs -                   FAILED
+ 6 fcfs - PASSED
  7 fcfs - PASSED
- 8 fcfs -                   FAILED
- 9 fcfs - PASSED
+ 8 fcfs - PASSED                                 
+ 9 fcfs - PASSED                  
  10 fcfs -                  FAILED
  11 fcfs - PASSED
- 12 fcfs -                  FAILED
- 13 fcfs -                  FAILED
+ 12 fcfs -                  FAILED because it obeys: If the caller is the only runnable thread, it will be selected to run again, in other words, the yield will have no effect 
+ 13 fcfs - PASSED                 
  14 fcfs - PASSED
  15 fcfs - PASSED
  18 fcfs - PASSED
- 19 fcfs -                  FAILED
+ 19 fcfs - PASSED                 
 test_nested_fifo - PASSED
 
 
@@ -57,4 +61,16 @@ test_nested_fifo - PASSED
  22 sjf -
  23 sjf - 
  test_nested_sjf - PASSED
- test_sjf_yield - 
+ test_sjf_yield - d 
+
+test_priority_simple
+test_priority_quanta
+test_priority_same_priority
+test_priority_invalid
+test_priority_yield
+test_priority_join 
+test_priority_cpu_1
+test_priority_cpu_2
+
+test_misuse
+test_misuse_terminate

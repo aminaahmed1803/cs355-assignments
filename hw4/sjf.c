@@ -8,7 +8,6 @@ typedef struct {
 	sjf *running;
 	sjf *ready;
 	sjf *zombie;
-
 	
 	int logger;
 	
@@ -19,7 +18,6 @@ static bool innit = false;
 static long avg_runtime = DEFAULT_RUNTIME;
 static long last_runtimes[3] = {DEFAULT_RUNTIME, DEFAULT_RUNTIME, DEFAULT_RUNTIME};   
 static struct timespec start_time; 
-
 
 void sjf_enqueue(sjf **head, sjf *node){ // in acending order of t_n
    

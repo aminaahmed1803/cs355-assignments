@@ -5,6 +5,7 @@
 
 typedef struct fifo_thread_control_block{
 	pid_t tid;
+	pid_t waiting_tid;
 	ucontext_t context;
 	int state;
 	void (*start_function) (void *); 	
