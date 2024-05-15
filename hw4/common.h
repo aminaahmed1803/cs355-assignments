@@ -34,7 +34,7 @@
 #define ZERO_INTERVAL 200
 #define NEG_INTERVAL 100
 #define INTERVAL 100
-#define DEFAULT_RUNTIME 50
+#define DEFAULT_RUNTIME 500
 
 enum {
 	READY,

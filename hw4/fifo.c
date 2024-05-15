@@ -61,7 +61,7 @@ void fifo_display(fifo *head){
 
 bool fifo_search(fifo *head, pid_t tid ){
    	if (head == NULL) {
-    	return NULL;
+    	return false;
    	}
 
   	fifo *tmp = NULL;
@@ -75,7 +75,7 @@ bool fifo_search(fifo *head, pid_t tid ){
 		tmp = tmp->next;
     }
 
-   return NULL;
+   return false;
 }
 
 fifo * fifo_return_waiting(fifo **head, pid_t waiting_tid ){
@@ -101,7 +101,6 @@ fifo * fifo_return_waiting(fifo **head, pid_t waiting_tid ){
 
    return NULL;
 }
-
 
 fifo * fifo_return(fifo **head, pid_t tid ){
    if (head == NULL) {
@@ -223,7 +222,6 @@ static void stub_function(void *(*func) (void *), void *arg) {
    thread_exit(func(arg));
 }
 
-
 int fifo_libinit(int policy){
 
 	if(innit) return FAILURE; 
@@ -266,7 +264,6 @@ int fifo_libinit(int policy){
 	return EXIT_SUCCESS;
 }
 
-
 int fifo_create(void (*func)(void *), void *arg, int priority){
 
 	if(!innit) return FAILURE; 
@@ -296,7 +293,6 @@ int fifo_create(void (*func)(void *), void *arg, int priority){
 	fifo_enqueue(&library->ready, new_thread);	
 	return new_thread->tid;
 }
-
 
 int fifo_yield(void){
 	// Add running process back to the ready queue.
@@ -378,7 +374,6 @@ int fifo_join(int tid){
 
 	return EXIT_SUCCESS;
 }
-
 
 int fifo_libterminate(void){
 	

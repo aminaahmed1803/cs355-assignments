@@ -8,15 +8,15 @@ typedef struct {
 	sjf *running;
 	sjf *ready;
 	sjf *zombie;
-	
+	sjf *waiting;
 	int logger;
 	
 } LIB;
 
 static LIB *library;
 static bool innit = false;
+static long total_runtime = DEFAULT_RUNTIME;
 static long avg_runtime = DEFAULT_RUNTIME;
-static long last_runtimes[3] = {DEFAULT_RUNTIME, DEFAULT_RUNTIME, DEFAULT_RUNTIME};   
 static struct timespec start_time; 
 
 void sjf_enqueue(sjf **head, sjf *node){ // in acending order of t_n
@@ -56,7 +56,7 @@ void sjf_queue_display(sjf *head){
     }
 }
 
-sjf *  sjf_queue_search(sjf **head, pid_t tid ){
+sjf *  sjf_get(sjf **head, pid_t tid ){
    if (head == NULL) {
       return NULL;
    }
@@ -77,6 +77,46 @@ sjf *  sjf_queue_search(sjf **head, pid_t tid ){
     }
 
    return NULL;
+}
+
+sjf * sjf_return_waiting(sjf **head, pid_t waiting_tid ){
+   if (head == NULL) {
+      return NULL;
+   }
+
+  sjf *tmp = NULL;
+  tmp = *head;
+  sjf *prev = NULL;
+   while (tmp != NULL) {  
+      if (tmp->waiting_tid == waiting_tid) {
+         if (prev != NULL) {
+            prev->next = tmp->next;
+         } else {
+            *head = (*head)->next;;
+         }
+         return tmp;
+      }
+      prev = tmp;
+      tmp = tmp->next;
+    }
+   return NULL;
+}
+
+bool  sjf_search(sjf *head, pid_t tid ){
+   if (head == NULL) {
+      return false;
+   }
+
+   sjf *tmp = head;
+   while (tmp != NULL) {  
+      if (tmp->tid == tid) {
+         return true;
+      }
+      
+      tmp = tmp->next;
+    }
+
+   return false;
 }
 
 void  sjf_queue_terminate(sjf **head){
@@ -146,39 +186,44 @@ static void log_status(sjf *node, char *operation){
 	close(library->logger);
 }
 
-void sjf_thread_exit(void *return_value ){
+static int sjf_thread_exit(void *return_value ){
 
 	if (library->running == library->main_thread){
-		return; 
+		return FAILURE; 
 	}
 
-	sjf *curr_thread = library->running;
-	
-	//library->total_runtime += time_taken;
+	sjf *current = library->running;
 
-	last_runtimes[0] = last_runtimes[1];
-    last_runtimes[1] = last_runtimes[2];
-    last_runtimes[2] = curr_thread->runtime;
-    avg_runtime = (2 * avg_runtime + curr_thread->runtime) / 3;
-
+	total_runtime += current->runtime;
+	avg_runtime = total_runtime;
 
 	//curr_thread->runtime += time_taken; 
-	curr_thread->state = ZOMBIE;
-	curr_thread->return_value = return_value;
-	log_status(curr_thread, "FINISHED");
-	sjf_enqueue(&library->zombie, curr_thread);
+	current->state = ZOMBIE;
+	current->return_value = return_value;
+	log_status(current, "FINISHED");
+	sjf_enqueue(&library->zombie, current);
 	
-	sjf *next_thread = sjf_dequeue(&library->ready);
+	sjf *next = sjf_return_waiting(&library->waiting, current->tid);
+	while(next != NULL){
+		next->state = READY;
+		sjf_enqueue(&library->ready, next);
+		next = sjf_return_waiting(&library->waiting, current->tid);
+	}
 
-	if (next_thread == NULL){
-		next_thread = library->main_thread;
+	next = sjf_dequeue(&library->ready);
+
+	if (next == NULL){
+		library->running = library->main_thread;
+		library->main_thread->state = RUNNING;
+		swapcontext(&current->context, &(library->main_thread->context));
+		return EXIT_SUCCESS;	
 	}	// will just start the next thread
 
-	next_thread->state = RUNNING;	
-	library->running = next_thread;
-	log_status(next_thread, "SCHEDULED");
-	//gettimeofday(&(next_thread->start_time), NULL);
-	swapcontext(&curr_thread->context, &next_thread->context);
+	next->state = RUNNING;	
+	library->running = next;
+	log_status(next, "SCHEDULED");
+	swapcontext(&current->context, &next->context);
+	return EXIT_SUCCESS;
 }
 
 static void stub_function(void *(*func) (void *), void *arg) {
@@ -236,7 +281,6 @@ int sjf_libterminate(void){
 
 int sjf_create(void (*func)(void *), void *arg, int priority){
 
-
 	if(!innit) return FAILURE; 
 	
 	sjf *new_thread = (sjf*)malloc(sizeof(sjf));
@@ -249,25 +293,13 @@ int sjf_create(void (*func)(void *), void *arg, int priority){
 	new_thread->args =  arg;
 	new_thread->return_value =  NULL;
 	new_thread->state = READY;
-	
+
 	getcontext(&new_thread->context);
 	new_thread->context.uc_stack.ss_sp = malloc(STACKSIZE);;
 	new_thread->context.uc_stack.ss_size = STACKSIZE;
 	new_thread->context.uc_stack.ss_flags = 0;
-	new_thread->runtime = (last_runtimes[0] + last_runtimes[1] + last_runtimes[2]) / 3;
 	makecontext(&new_thread->context, (void (*) (void)) stub_function, 2, func, arg);
 	log_status(new_thread, "CREATED");
-
-	/*if (library->running == library->main_thread){
-		new_thread->state = RUNNING;
-		log_status(new_thread, "SCHEDULED");
-		library->running = new_thread;
-		gettimeofday(&new_thread->start_time, NULL); //start timer
-		swapcontext(&library->main_thread->context, &new_thread->context);
-	}
-	else {
-		sjf_enqueue(&library->ready, new_thread);
-	}*/
 
 	sjf_enqueue(&library->ready, new_thread);
 	
@@ -280,46 +312,51 @@ int sjf_yield(void){
 	
 	sjf *curr_thread = library->running;
 	
+	if (curr_thread != library->main_thread){
+		
 	struct timespec current_time;
 
-    if (clock_gettime(CLOCK_MONOTONIC, &current_time) == -1) {
-        perror("clock gettime");
-        exit(EXIT_FAILURE);
-    }
 
-    long elapsed_time = (current_time.tv_sec - start_time.tv_sec) * 1000 +
-                            (current_time.tv_nsec - start_time.tv_nsec) / 1000;
-    int actual_runtime = elapsed_time - curr_thread->runtime;
+    	if (clock_gettime(CLOCK_MONOTONIC, &current_time) == -1) {
+        	perror("clock gettime");
+        	exit(EXIT_FAILURE);
+   		}
 
-        // update runtime
-    curr_thread->runtime = actual_runtime; 
+    	long elapsed_time = (current_time.tv_sec - curr_thread->start_time.tv_sec) * 1000 +
+                            (current_time.tv_nsec - curr_thread->start_time.tv_nsec) / 1000;
+    	//int actual_runtime = elapsed_time - curr_thread->runtime;
+		curr_thread->last_runtimes[0] = curr_thread->last_runtimes[1];
+		curr_thread->last_runtimes[1] = curr_thread->last_runtimes[2];
+		curr_thread->last_runtimes[2] = elapsed_time;
 
-	if (curr_thread->state == RUNNING) {
-		curr_thread->state = READY;
-		// over here if it has not finished running update Tn+1
-		if (curr_thread != library->main_thread){
-			
-			//unsigned long time_taken = get_elapsed_time(curr_thread);
-			//curr_thread->runtime += time_taken;
-			//library->total_runtime += time_taken;
+    	curr_thread->runtime = (curr_thread->last_runtimes[0] + curr_thread->last_runtimes[1] + curr_thread->last_runtimes[2]) / 3; 
 
-			sjf_enqueue(&library->ready, curr_thread);
-			log_status(curr_thread, "STOPPED");
+		if (curr_thread->state == RUNNING) {
+			curr_thread->state = READY;
+		
+			if (curr_thread != library->main_thread){
+				sjf_enqueue(&library->ready, curr_thread);
+				log_status(curr_thread, "STOPPED");
+			}
+		} else {
+			return FAILURE;
 		}
-	} // don't need to do anything if it is a zombie
-	//sjf_queue_display(library->ready);
-
+	
+	}
 	sjf *next_thread = sjf_dequeue(&library->ready);
-	//printf("\n\n");
 
 	if (next_thread == NULL){
 		next_thread = library->main_thread;
+		next_thread->state = RUNNING;	
+		library->running = next_thread;
+		swapcontext(&curr_thread->context, &next_thread->context);
+		return EXIT_SUCCESS;
 	}
 
 	next_thread->state = RUNNING;	
 	library->running = next_thread;
 	log_status(next_thread, "SCHEDULED");
-	//gettimeofday(&(next_thread->start_time), NULL);
+	clock_gettime(CLOCK_MONOTONIC, &(next_thread->start_time));
 	swapcontext(&curr_thread->context, &next_thread->context);
 
 	return EXIT_SUCCESS;
@@ -330,39 +367,63 @@ int sjf_join(int tid){
 
 	if(!innit) return FAILURE; 
 
-	// add case where if to be joined is a zombie return success
-	if ( sjf_queue_search(&library->zombie, tid) != NULL){
+	if (sjf_search(library->zombie, tid)){
 		return EXIT_SUCCESS;
 	}
 	
-	sjf *to_be_joined = sjf_queue_search(&library->ready, tid);
+	bool join = sjf_search(library->ready, tid);
+	
+	if (tid == 0 || library->running->tid == tid || !join){
+		if (library->running == library->main_thread){ //if it does not exist but current thread is main thread call yeild 
+			sjf_yield();
+		}
+		return FAILURE; // if it does not exist and current thread is not main thread 
+	}
 
-	if (tid == 0 || library->running->tid == tid || to_be_joined == NULL ) {
+	if (library->running == library->main_thread){ //if it exists but current thread is main thread call yeild 
+		return sjf_yield();
+	}
+
+	// if it exits and current thread is not main put current thread behind it and call yeild
+
+
+	sjf *current = library->running;
+	current->waiting_tid = tid;
+
+	struct timespec current_time;
+    if (clock_gettime(CLOCK_MONOTONIC, &current_time) == -1) {
+    	perror("clock gettime");
+		exit(EXIT_FAILURE);
+   	}
+
+	long elapsed_time = (current_time.tv_sec - current->start_time.tv_sec) * 1000 +
+                            (current_time.tv_nsec -  current->start_time.tv_nsec) / 1000;
+    	//int actual_runtime = elapsed_time - curr_thread->runtime;
+	current->last_runtimes[0] = current->last_runtimes[1];
+	current->last_runtimes[1] = current->last_runtimes[2];
+	current->last_runtimes[2] = elapsed_time;
+    current->runtime = (current->last_runtimes[0] + current->last_runtimes[1] + current->last_runtimes[2]) / 3; 
+
+	sjf_enqueue(&library->waiting, current);
+
+	if (current->state == RUNNING) {
+		library->running->state = READY;
+	} else {
 		return FAILURE;
 	}
-	
-	sjf *curr_thread = library->running;
 
-	if (curr_thread->state == RUNNING) {
-		curr_thread->state = READY;
-		
-		if (curr_thread != library->main_thread){
-			
-			//unsigned long time_taken = get_elapsed_time(curr_thread);
-			//curr_thread->runtime += time_taken;
-			//library->total_runtime += time_taken;
+	log_status(current, "STOPPED"); 
+	sjf *next = sjf_dequeue(&library->ready);
 
-			sjf_enqueue(&library->ready, curr_thread);
-			log_status(curr_thread, "STOPPED");
-		}
-	} // don't need to do anything if it is a zombie
+	if (next == NULL){
+		return FAILURE;
+	}
 
-
-	to_be_joined->state = RUNNING;
-	library->running = to_be_joined;
-	log_status(to_be_joined, "SCHEDULED");
-	//gettimeofday(&(to_be_joined->start_time), NULL);
-	swapcontext(&curr_thread->context, &to_be_joined->context);
+	next->state = RUNNING;	
+	library->running = next;
+	log_status(next, "SCHEDULED");
+	clock_gettime(CLOCK_MONOTONIC, &(next->start_time));
+	swapcontext(&current->context, &next->context);
 
 	return EXIT_SUCCESS;
 }

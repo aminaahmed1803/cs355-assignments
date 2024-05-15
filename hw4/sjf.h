@@ -12,6 +12,8 @@ typedef struct sjf_thread_control_block{
 	void (*start_function) (void *); 	
 	void *args; 				
 	void *return_value; 	
+	long last_runtimes[3];  
+	struct timespec start_time; 
     struct sjf_thread_control_block *next;
 
 } sjf;
