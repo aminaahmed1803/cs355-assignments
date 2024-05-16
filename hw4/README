@@ -55,13 +55,13 @@ test_nested_fifo - PASSED
 
 
  16 sjf - PASSED
- 17 sjf - 
- 20 sjf - 
+ 17 sjf - PASSED
+ 20 sjf -               FAILED
  21 sjf - PASSED
- 22 sjf -
- 23 sjf - 
+ 22 sjf - PASSED
+ 23 sjf - PASSED
  test_nested_sjf - PASSED
- test_sjf_yield - d 
+ test_sjf_yield -       FAILED 
 
 test_priority_simple
 test_priority_quanta
