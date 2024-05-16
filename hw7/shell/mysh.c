@@ -7,6 +7,12 @@
 
 #include "common.h"
 
+int num_jobs = 1;
+bool append;
+bool redirect_in;
+bool redirect_out;
+char *filename;
+
 int set_status(int pid, int status){
     if ((foreground_job != NULL) && (foreground_job->pid == pid)) {
         foreground_job->status = status;
@@ -163,10 +169,10 @@ int builtin_cmd_handler(char** command) {
         return SUCCESS;
     }
     //cat displays the content of one or more files to the output.
-    if (strcmp(command[0], "cat") == 0) {
+    //if (strcmp(command[0], "cat") == 0) {
         //TODO
-        return SUCCESS;
-    }
+    //    return SUCCESS;
+    //}
     //more lists a file a screen at a time
     if (strcmp(command[0], "more") == 0) {
         //TODO
@@ -194,25 +200,106 @@ int builtin_cmd_handler(char** command) {
     return FAIL;
 }
 
+int check_redirection(char** command, int* in_fd, int* out_fd) {
+    if (command == NULL) {
+        return FAIL;
+    }
+    for (int i=0; command[i]!=NULL; i++){
+        if (strcmp(command[i], ">") == 0) {
+            if (command[i+1] != NULL && strcmp(command[i+1], ">") == 0) {
+                if (command[i+2] == NULL){
+                    return FAIL;
+                }else {
+                    filename = command[i+2];
+                    //printf("append\n");
+                    append = true;
+                    *out_fd = open(filename, O_WRONLY | O_APPEND, 0644);
+                    if (*out_fd <0){
+                        *out_fd = 1;
+                    }
+                    free(command[i]);
+                    command[i] = NULL;
+                    free(command[i+1]);
+                    command[i+1] = NULL;
+                    command[i+2] = NULL;
+
+                    return SUCCESS;
+                }
+            }else {
+                if (command[i+1] == NULL){
+                    return FAIL;
+                }else {
+                    //printf("redir out detected\n");
+                    redirect_out = true;
+                    filename = command[i+1];
+                    *out_fd = open(filename, O_WRONLY | O_CREAT, 0644);
+                    if (*out_fd <0){
+                        *out_fd = 1;
+                    }
+                    free(command[i]);
+                    command[i] = NULL;
+                    command[i+1] = NULL;
+
+                    return SUCCESS;
+                }
+            }
+        } else if (strcmp(command[i], "<") == 0) {
+            if (command[i+1] == NULL){
+                return FAIL;
+            }else{
+                //printf("redir in detected\n");
+                filename = command[i+1];
+
+                redirect_in = true;
+                *in_fd = open(command[i+1], O_RDONLY);
+                if (*in_fd < 0){
+                    printf("mysh: no such file or directory: %s\n", command[i+1]);
+                    return FAIL;
+                }
+
+                free(command[i]);
+                command[i] = NULL;
+                command[i+1] = NULL;
+
+                return SUCCESS;
+            }
+        }
+    }
+    return SUCCESS;
+}
+
 int launch_job(char*** command, int num_commands) {
     bool invalid = false;
     char invalid_command[1024] = "";
+    int in_fd=0, out_fd=1;
+    filename = NULL;
 
-    //acknowledge_zombie();
     if (num_commands == 0) {
         return SUCCESS;
     }
 
     for (int i = 0; i < num_commands; i++) {
 
+        redirect_in = false;
+        redirect_out = false;
+        append = false;
+        invalid = false;
+
         if (command[i] == NULL) {
             invalid = true;
             break;
-        }
-        
+        }        
+    
         if ( builtin_cmd_handler(command[i]) == SUCCESS ) {
             continue;
         } 
+
+        //check for redirection out, rediection in, append
+        if (check_redirection(command[i], &in_fd, &out_fd) == FAIL) {
+            invalid = true;
+            break;
+        }
+
         
         int sz = 0;
         JOB *job = (JOB *)malloc(sizeof(JOB));
@@ -277,6 +364,22 @@ int launch_job(char*** command, int num_commands) {
             signal(SIGTTOU, SIG_DFL);
             signal(SIGCHLD, SIG_DFL);
             signal(SIGTERM, SIG_DFL);
+            
+            
+            if (redirect_in) {
+                dup2(in_fd, 0);
+                close(in_fd);
+            }
+
+            if (append) {
+                dup2(out_fd, 1);
+                close(out_fd);
+            }
+
+            if (redirect_out){
+                dup2(out_fd, 1);
+                close(out_fd);
+            }
 
             if (execvp(job->command[0], job->command) < 0) {
                 printf("%s: command not found\n", job->command[0]);
@@ -345,11 +448,21 @@ int launch_job(char*** command, int num_commands) {
                     insert_at_end(&head, job);
                 }
             }
-        }   
 
+          
+        } 
+        if (filename != NULL) {
+            free(filename);
+            filename = NULL;
+        }
         if (invalid) {
             printf("bash: syntax error near unexpected token '%s'\n", line);
         }
+    
+    }
+
+    if (invalid) {
+        printf("bash: syntax error near unexpected token '%s'\n", line);
     }
     
 

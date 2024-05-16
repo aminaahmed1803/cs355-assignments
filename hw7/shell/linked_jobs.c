@@ -22,6 +22,8 @@
 #include "common.h"
 int global_job_id = 1;
 
+
+
 /*
  * display_jobs_list()
  * -------------------

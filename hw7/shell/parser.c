@@ -141,13 +141,6 @@ char ***parse_command(char *line, int *num_commands) {
         return NULL;
     }
 
-    /*if (line[0] != '\0' && line[1] != '\0') {
-        if (line[0] == 'p' && line[1] == ' ') {
-            printf("bash: syntax error near unexpected token p\n");
-            return NULL;
-        }
-    }*/
-
     line = trim_string(line);
 
     char *line_cursor = line, *c = line, *seg;
@@ -222,20 +215,7 @@ char ***parse_command(char *line, int *num_commands) {
             c++;
         }
     }
-    
-    // Print the values of all_commands
-    // printf("Parsed Commands:\n");
-    // for (int i = 0; i < *num_commands; i++) {
-    //     printf("%d. ", i + 1);
-    //     char **command = all_commands[i];
-    //     int j = 0;
-    //     while (command[j] != NULL) {
-    //         printf("%s ", command[j]);
-    //         j++;
-    //     }
-    //     printf("\n");
-    // }
-    // printf("\n");
+
 
     return all_commands;
 }

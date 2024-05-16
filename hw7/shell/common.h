@@ -55,7 +55,6 @@ typedef struct job{
 
 
 int total_jobs;
-int num_jobs = 1;
 char * line;
 char ***commands;
 pid_t shell_pid;
@@ -64,6 +63,11 @@ JOB *head;
 JOB *foreground_job;
 sigset_t blocked;
 struct termios main_termios;
+
+bool append;
+bool redirect_in;
+bool redirect_out;
+
 
 char *read_line();
 char ***parse_command(char *line, int *num_commands);
@@ -81,6 +85,9 @@ JOB* get_last_SUSPENDED(JOB* head);
 void free_node(JOB* job);
 
 void check_zombie();
+int wait_for_pid(int pid);
+void signal_handler(int signal);
+int set_status(int pid, int status);
 
 void exiting();
 int bg(char **command);
