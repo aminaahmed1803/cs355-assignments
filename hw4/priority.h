@@ -5,25 +5,26 @@
 
 typedef struct priority_thread_control_block{
 	pid_t tid;
+	pid_t waiting_tid;
 	ucontext_t context;
 	int state;
-    int priority;
+    int p;
 	void (*start_function) (void *); 	
 	void *args; 				
 	void *return_value; 
 	struct timeval start_time;
-    struct rr_thread_control_block *next;
+    struct priority_thread_control_block *next;
 } priority;
 
 
-int rr_thread_libinit(int policy);
+int priority_libinit(int policy);
 
-int rr_thread_create(void (*func)(void *), void *arg, int priority);
+int priority_create(void (*func)(void *), void *arg, int priority);
 
-int rr_thread_yield(void);
+int priority_yield(void);
 
-int rr_thread_join(int tid);
+int priority_join(int tid);
 
-int rr_thread_libterminate(void);
+int priority_libterminate(void);
 
 #endif

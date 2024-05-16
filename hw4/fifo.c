@@ -376,6 +376,7 @@ int fifo_join(int tid){
 }
 
 int fifo_libterminate(void){
+	if(!innit) return FAILURE; 
 	
 	if (library->running == NULL || library->running != library->main_thread || library->ready != NULL){
 		return FAILURE;

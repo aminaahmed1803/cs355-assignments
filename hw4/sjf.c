@@ -268,6 +268,9 @@ int sjf_libinit(int policy){
 } 
 
 int sjf_libterminate(void){
+
+	if(!innit) return FAILURE; 
+	
 	if (library->running == NULL || library->running != library->main_thread || library->ready != NULL){
 		return FAILURE;
 	}

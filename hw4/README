@@ -22,15 +22,13 @@ TEST SUITE
 9. random_join.c - this test ensures the proper working of the join regardless of the order of the threads. 
 10. test_priority.c - this ensures that tasks are executed in order of their priority
 11. test_logging.c - this ensures that the logging works for each policy 
-12. 
-13. 
-14. 
-15. 
-16. 
-17. 
-18.
-19. 
-20. 
+
+New Tests:
+12. priority scheduling - this tests the priority scheduling policy by creating threads with different priorities and ensuring that the highest priority thread runs first.
+13. sjf scheduling - this tests the sjf scheduling policy by creating threads with different run times and ensuring that the shortest job runs first.
+14. misuse - this tests the misuse of the library by creating threads that are not initialized properly and ensuring that the library handles it properly.
+15. nested_fifo - this should result in an infinite loop since the threads are created in a nested fashion.
+
 
 Here are some short descriptions of what the tests are supposed to check:
  0 fcfs - PASSED
@@ -63,14 +61,14 @@ test_nested_fifo - PASSED
  test_nested_sjf - PASSED
  test_sjf_yield -       FAILED 
 
-test_priority_simple
-test_priority_quanta
-test_priority_same_priority
-test_priority_invalid
-test_priority_yield
-test_priority_join 
-test_priority_cpu_1
-test_priority_cpu_2
+test_priority_simple             PASSED
+test_priority_quanta                        FAILED
+test_priority_same_priority     PASSED
+test_priority_invalid           PASSED
+test_priority_yield             PASSED
+test_priority_join              PASSED      
+test_priority_cpu_1                        ?
+test_priority_cpu_2                        ?
 
-test_misuse
-test_misuse_terminate
+test_misuse                     PASSED
+test_misuse_terminate           PASSED
