@@ -43,6 +43,7 @@ int f_init(int uid, char *filename){
 int create_file(char *filename, dir_header *directory){
     //get free FAT
     int idx = 1;
+    u_int16_t cap = -1;
     for (; idx<sb->total_data_blocks && fat_table[idx] != 0; idx++){
     }
     if (idx >= sb->total_data_blocks){
@@ -278,7 +279,7 @@ size_t f_write(void *ptr, size_t size, size_t nmemb, file *stream){
     while (fat_table[write_fat] != cap){
         write_fat = fat_table[write_fat];
     }
-
+    printf("write_fat: %d\n", write_fat);
     file_header *header = (file_header *)malloc(sizeof(file_header));
     memset(header, INITIALIZE, BLOCKSIZE);
     int offset = sb->data_offset + (write_fat * BLOCKSIZE);
@@ -305,8 +306,9 @@ size_t f_write(void *ptr, size_t size, size_t nmemb, file *stream){
     for (int i=0; bytes_written < total_bytes; i++){
 
         int space = 480 - header->buffer_used;
+        space = (space > total_bytes - bytes_written) ? total_bytes - bytes_written : space;
         offset = sb->data_offset + (write_fat * BLOCKSIZE);
-        memcpy(header->buffer + header->buffer_used, new_data, space);
+        memcpy(header->buffer + header->buffer_used, new_data + bytes_written, space);
         header->buffer_used += space;
         header->size += total_bytes;
         fseek(disk,offset,SEEK_SET);
@@ -321,14 +323,20 @@ size_t f_write(void *ptr, size_t size, size_t nmemb, file *stream){
             if (idx >= sb->total_data_blocks){
                 return FAIL;
             }
+            if (idx == 1){
+                return bytes_written;
+            }   
+            printf("idx for file %s: %d\n", stream->name, idx);
 
             header->next_FAT = idx;
-            
+            fat_table[write_fat] = idx;
+            fat_table[idx] = -1;
+            write_fat = idx;
             total_blocks += 1;
 
             offset = sb->data_offset + (idx * BLOCKSIZE);
             memset(header, INITIALIZE, BLOCKSIZE);
-            
+            strncpy(header->name, stream->name, 12); 
             header->uid = uid;
             header->is_dir = FALSE;
             header->dir_FAT = dir_FAT;
@@ -338,9 +346,12 @@ size_t f_write(void *ptr, size_t size, size_t nmemb, file *stream){
             header->size = file_size;
             header->buffer_used = 0;
             header->unused = 0;
+            header->next_FAT = -1;
 
         }
     }
+
+    stream->curr_FAT = write_fat;
    free(header);
     
     return bytes_written;
@@ -366,6 +377,7 @@ int f_seek(file *stream, long offset, int position){
 
 /*move to the start of the file*/
 void f_rewind(file *stream){
+    
 
 }
 
@@ -406,6 +418,9 @@ int f_rmdir(const char *pathname){
 }
 
 void f_terminate(){
+    if (!init){
+        return;
+    }
     fseek(disk, BLOCKSIZE, SEEK_SET);
     fwrite(fat_table,sizeof(uint16_t),sb->fat_entries,disk);
 
@@ -422,21 +437,34 @@ int main(){
 
     file * h2 = f_open("/f2.txt", WRITE_ONLY);
 
-    char *buffer = "I like green apples. I like yellow apples. I like blue apples. I like purple apples. I like orange apples. I like pink apples. I like black apples. I like white apples. I like brown apples. I like grey apples. I like silver apples. I like gold apples. I like copper apples. I like bronze apples. I like brass apples. I like aluminum apples. I like iron apples.";
+    for (int i=0 ;i<20 ; i++){
+        printf("%d ", fat_table[i]);
 
-    char *reader = (char *)malloc(strlen(buffer));
+    }printf("\n");
+
+    char *buffer = "I like green apples. I like yellow apples. I like blue apples. I like purple apples. I like orange apples. I like pink apples. I like black apples. I like white apples. I like brown apples. I like grey apples. I like silver apples. I like gold apples. I like copper apples. I like bronze apples. I like brass apples. I like aluminum apples. I like iron apples. I like zebra apples. I like melon apples. I like watermelon apples. I like cantaloupe apples. I like honeydew apples. I like strawberry apples. I like raspberry apples. I like blueberry apples. I like blackberry apples. I like cranberry apples. I like cherry apples. I like peach apples. I like pear apples. I like plum apples. I like grape apples. I like kiwi apples. I like pineapple apples. I like mango apples. I like papaya apples. I like banana apples. I like coconut apples. I like orange apples. I like lemon apples. I like lime apples. I like grapefruit apples. I like tangerine apples. I like clementine apples. I like mandarin apples. I like kumquat apples. I like persimmon apples. I like pomegranate apples. I like avocado apples. I like olive apples. I like tomato apples. I like cucumber apples. I like zucchini apples. I like squash apples. I like pumpkin apples. I like eggplant apples. I like pepper apples. I like onion apples. I like garlic apples. I like ginger apples. I like turmeric apples. I like cinnamon apples. I like nutmeg apples. I like clove apples. I like allspice apples. I like cumin apples. I like coriander apples. I like cardamom apples. I like mustard apples. I like horseradish apples. I like wasabi apples. I like jalapeno apples. I like habanero apples. I like ghost apples. I like scorpion apples. I like reaper apples. I like cayenne apples. I like paprika apples. I like chili apples. I like pepper apples. I like salt apples. I like sugar apples. I like honey apples. I like syrup apples. I like molasses apples. I like caramel apples. I like chocolate apples. I like vanilla apples. I like coffee apples. I like tea apples. I like milk apples. I like cream apples. I like butter apples. I like cheese apples. I like yogurt apples. I like ice cream apples. I like sorbet apples. I like sherbet apples. I like gelato apples. I like custard apples. I like pudding apples. I like jello apples. I like mousse apples. I like souffle apples. I like cake apples. I like pie apples. I like tart apples. I like c";
+
+    //char *reader = (char *)malloc(strlen(buffer));
 
     f_write(buffer, 1, strlen(buffer), h1);
 
     f_write(buffer, 1, strlen(buffer), h2);
 
-    f_read((void *) reader, 1, strlen(buffer), h1);
+    //f_read((void *) reader, 1, strlen(buffer), h1);
+
+    printf("file name: %s\n", h1->name);
+    printf("file size: %s\n", h2->name);
+
+    for (int i=0 ;i<20 ; i++){
+        printf("%d ", fat_table[i]);
+
+    }printf("\n");
 
     f_close(h1);
 
     f_close(h2);
 
-    //f_terminate();
+    f_terminate();
 
     return SUCCESS;
 }
