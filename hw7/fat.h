@@ -38,23 +38,10 @@
 #define KBYTE 1024
 
 #define NAME_BYTES 12
-#define SUPERBLOCK_BYTES 512
-#define FATTABLE_BYTES 8192 // 2048 * 4
-#define SUPERBLOCK_PADDING 496
-#define FILE_AFTER_HEADER_BYTES 480
-#define TABLE_OFFSET 1
-#define TABLE_BLOCKS 16
-#define FIXED_FREEBLOCK 2
-#define UNUSED_BLOCK -2
+
 
 #define TRUE 1
 #define FALSE 0
-
-#define FREE_DATABLOCK_EXTRA_BYTES 508
-#define PROT_BYTES 11
-#define NONE_FREE -1
-#define FILE_HEADER_BYTES 32
-#define DIR_ENTRY_BYTES 32
 
 #define USER 1
 #define SUPERUSER 0
@@ -131,19 +118,22 @@ typedef struct dir_header {
     u_int8_t uid; 
     u_int8_t is_dir;
     u_int32_t items; 
+    u_int16_t idx; 
     u_int16_t first_FAT; 
     u_int16_t parent_FAT; 
     dir_entry files[15]; 
-    char junk[6];
+    char junk[4];
 }dir_header;
 
-u_int16_t *fat_table;
-super_block *sb;
-int f_error;
-FILE *disk;
-int uid;
+static u_int16_t *fat_table;
+static super_block *sb;
+static int f_error;
+static FILE *disk;
+static int uid;
+static bool fat_init = false; 
+static dir_header *current_directory; 
 
-int f_init(int uid, char *filename);
+int f_init(char *filename);
 file *f_open(char *pathname, int mode);
 size_t f_read(void *ptr, size_t size, size_t nmemb, file *stream);
 size_t f_write(void *ptr, size_t size, size_t nmemb, file *stream);
@@ -151,12 +141,23 @@ int f_close(file *stream);
 int f_seek(file *stream, long offset, int position);
 void f_rewind(file *stream);
 int f_stat(file *stream, file_header *stat_buffer);
-int f_remove(const char *pathname);
-dir *f_opendir(const char *name);
+int f_remove(char *pathname);
+dir *f_opendir(char *name);
 dir_entry *f_readdir(dir *directory);
 int f_closedir(dir *stream);
-int f_mkdir(const char *pathname, char *mode);
-int f_rmdir(const char *pathname);
+int f_mkdir(char *pathname, char *mode);
+int f_rmdir(char *pathname);
 void f_terminate();
+
+int disk_int();
+int list_dir(char **command);
+int chmod_file(char **command);
+int mkdir_shell(char **command);
+int rmdir_shell(char **command);
+int cd(char **command);
+int pwd(char **command);
+int cat(char **command);
+int more(char **command);
+int remove_file(char **command);
 
 #endif 

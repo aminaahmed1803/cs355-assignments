@@ -1,21 +1,20 @@
 #include <stdio.h>
 #include "fat.h"
 
-bool init = false; 
-dir_header *current_directory; 
+//have a array of file handles
+//have a array of directory handles
 
-int f_init(int uid, char *filename){
-    if (!init){
+int f_init(char *filename){
+    if (!fat_init){
     
         disk = fopen(filename, "r+");
         if (disk == NULL) {
             return FAIL;
         }  
-        
-        uid = uid;
 
         sb = (super_block*)malloc(sizeof(super_block));
-        fread(sb,sizeof(*sb),1,disk);
+        memset(sb, INITIALIZE, BLOCKSIZE);
+        fread(sb,sizeof(super_block),1,disk);
         //printf("sb: %d, %d, %d, \n", sb->data_offset, sb->total_blocks, sb->fat_entries);
 
         fat_table = (uint16_t*)malloc(sb->fat_size);
@@ -23,7 +22,7 @@ int f_init(int uid, char *filename){
         fread(fat_table,sizeof(uint16_t),sb->fat_entries,disk);
         //printf("%d\n", fat_table[0]);
 
-        init = true;
+        fat_init = true;
 
         current_directory = NULL;
         current_directory = (dir_header *)malloc(sizeof(dir_header));
@@ -33,11 +32,60 @@ int f_init(int uid, char *filename){
         //printf("%d\n", current_directory->is_dir);
 
         assert(disk);
-        assert(init);
+        assert(fat_init);
         return SUCCESS;
     }
     return FAIL;
     
+}
+
+void sanity_check(file_header *header){
+
+    uint16_t idx = header->first_FAT;
+    int offset = sb->data_offset + (idx * BLOCKSIZE);
+    file_header *tmp = (file_header *)malloc(sizeof(file_header));
+    memset(tmp, INITIALIZE, BLOCKSIZE);
+    fseek(disk,offset,SEEK_SET);
+    fread(header,sizeof(file_header),1,disk);
+
+    u_int16_t first_fat = header->first_FAT;
+    u_int16_t parent_fat = header->parent_FAT;
+    size_t size = header->size;
+    u_int16_t cap = -1;
+
+    do {
+
+        memset(tmp, INITIALIZE, BLOCKSIZE);
+        offset = sb->data_offset + (idx * BLOCKSIZE);
+        fseek(disk,offset,SEEK_SET);
+        fread(tmp,sizeof(file_header),1,disk);
+        
+        strncpy(tmp->name, header->name, 12);
+        tmp->uid = header->uid;
+        tmp->is_dir = header->is_dir;
+        tmp->first_FAT = first_fat;
+        tmp->parent_FAT = parent_fat;
+        tmp->dir_FAT = header->dir_FAT;
+        tmp->size = header->size;
+        tmp->total_blocks  = header->total_blocks;
+
+        offset = sb->data_offset + (idx * BLOCKSIZE);
+        idx = fat_table[idx];
+        size -= 480;
+        if (idx != -1){
+            tmp->buffer_used = 480;
+        } else {
+            tmp->buffer_used = size;
+        }
+        tmp->next_FAT = idx;
+        fseek(disk,offset,SEEK_SET);
+        fwrite(tmp,sizeof(file_header),1,disk);
+        
+    } while (idx != cap);
+
+    free(tmp);
+    tmp = NULL;
+    return;
 }
 
 int create_file(char *filename, dir_header *directory){
@@ -152,7 +200,7 @@ If the file does not exist, handle accordingly. (rule of thumb: create file if
 writing/appending, return error if reading is involved). Returns a file handle if successful.*/
 file *f_open(char *pathname, int mode){
 
-    if (!init) {
+    if (!fat_init) {
         return NULL;
     }
 
@@ -183,6 +231,7 @@ file *f_open(char *pathname, int mode){
     for(int i=0; i<dir->items; i++){
         if (strncmp(filename, dir->files[i].name, 12)==0 && dir->files[i].is_dir==FALSE){
             fat = dir->files[i].first_FAT;
+            //need to add UID here
         }
     }
     if(fat==FAIL && (mode==READ_ONLY || mode==READ_WRITE) ){
@@ -192,7 +241,7 @@ file *f_open(char *pathname, int mode){
     }
     //printf("%d\n", fat);
     if (fat==-1){
-        printf("file doesnt exist\n");
+        //printf("file doesnt exist\n");
         fat = create_file(filename, dir);
     }
     else{
@@ -237,6 +286,10 @@ file *f_open(char *pathname, int mode){
 /*read the specified number of bytes from a file handle at the current position. 
 Returns the number of bytes read, or an error.*/
 size_t f_read(void *ptr, size_t size, size_t nmemb, file *stream){
+    if (!fat_init){
+        return FAIL;
+    }
+
     if (stream == NULL){
         return FAIL;
     }
@@ -282,10 +335,13 @@ size_t f_read(void *ptr, size_t size, size_t nmemb, file *stream){
     return total_bytes;
 }
 
-
 /*write some bytes to a file handle at the current position. 
 Returns the number of bytes written, or an error.*/
 size_t f_write(void *ptr, size_t size, size_t nmemb, file *stream){
+
+    if (!fat_init){
+        return FAIL;
+    }
 
     if (stream == NULL){
         return FAIL;
@@ -296,7 +352,7 @@ size_t f_write(void *ptr, size_t size, size_t nmemb, file *stream){
     while (fat_table[write_fat] != cap){
         write_fat = fat_table[write_fat];
     }
-    printf("write_fat: %d\n", write_fat);
+    //printf("write_fat: %d\n", write_fat);
     file_header *header = (file_header *)malloc(sizeof(file_header));
     memset(header, INITIALIZE, BLOCKSIZE);
     int offset = sb->data_offset + (write_fat * BLOCKSIZE);
@@ -343,7 +399,7 @@ size_t f_write(void *ptr, size_t size, size_t nmemb, file *stream){
             if (idx == 1){
                 return bytes_written;
             }   
-            printf("idx for file %s: %d\n", stream->name, idx);
+            //printf("idx for file %s: %d\n", stream->name, idx);
 
             header->next_FAT = idx;
             fat_table[write_fat] = idx;
@@ -367,17 +423,25 @@ size_t f_write(void *ptr, size_t size, size_t nmemb, file *stream){
 
         }
     }
+    header->total_blocks = total_blocks;
+    header->size = file_size + total_bytes;
 
+    sanity_check(header);
     stream->curr_FAT = write_fat;
-   free(header);
+    free(header);
+    header = NULL;
     
     return bytes_written;
 }
 
 
-
 /* close a file handle*/
 int f_close(file *stream){
+
+    if (!fat_init){
+        return FAIL;
+    }
+
     if (stream == NULL){
         return FAIL;
     }
@@ -389,24 +453,76 @@ int f_close(file *stream){
 
 /*move to a specified position in a file*/
 int f_seek(file *stream, long offset, int position){
+
+    if (!fat_init){
+        return FAIL;
+    }
+
     return FAIL;
 }
 
 /*move to the start of the file*/
 void f_rewind(file *stream){
+
+
+    if (!fat_init){
+        return;
+    }
     
 
 }
 
 /* retrieve information about a file*/
 int f_stat(file *stream, file_header *stat_buffer){
+
+
+    if (!fat_init){
+        return FAIL;
+    }
+
     return FAIL;
 }
 
 /*recall that directories are handled as special cases of files. 
 open a “directory file” for reading, and return a directory handle.*/
-dir *f_opendir(const char *name){
+dir *f_opendir(char *name){
 
+    if (!fat_init){
+        return NULL;
+    }
+
+    dir *handle = (dir *)malloc(sizeof(dir));
+    memset(handle, INITIALIZE, sizeof(dir));
+
+    for(int i=0; i<current_directory->items; i++){
+        if (strncmp(name, current_directory->files[i].name, 12)==0 && current_directory->files[i].is_dir==TRUE){
+            if (uid == current_directory->files[i].uid || uid == SUPERUSER){
+                
+                dir_header *directory = (dir_header *)malloc(sizeof(dir_header));
+                memset((void *)directory, INITIALIZE, BLOCKSIZE);
+                int offset = sb->data_offset + (current_directory->files[i].first_FAT * BLOCKSIZE);
+                fseek(disk,offset,SEEK_SET);
+                fread(directory,sizeof(dir_header),1,disk);
+
+                strncpy(handle->name, name, 12);
+                handle->uid = uid;
+                handle->items = directory->items;
+                handle->first_FAT = directory->first_FAT;
+                handle->idx = 0;
+                memcpy(handle->current, &(directory->files[handle->idx]), sizeof(dir_entry));
+
+
+                free(directory);
+                directory = NULL;
+
+                return  handle;
+            }
+            else{
+                free(handle);
+                return NULL;
+            }
+        }
+    }
 
     return NULL;
 }
@@ -415,27 +531,39 @@ dir *f_opendir(const char *name){
 the next directory entry in the directory file specified.*/
 dir_entry *f_readdir(dir *directory){
 
+    if (!fat_init){
+        return NULL;
+    }
     return NULL;
 }
 
 /* close an open directory file*/
 int f_closedir(dir *stream){
+
+    if (!fat_init){
+        return FAIL;
+    }
     return FAIL;
 }
 
 /*make a new directory at the specified location*/
-int f_mkdir(const char *pathname, char *mode){
+int f_mkdir(char *pathname, char *mode){
+
+    if (!fat_init){
+        return FAIL;
+    }
     return FAIL;
 }
 
 /*delete a specified directory. Be sure to remove entire contents and the contents of 
 all subdirectorys from the filesystem. Do NOT simply remove pointer to directory.*/
-int f_rmdir(const char *pathname){
+int f_rmdir(char *pathname){
     return FAIL;
 }
 
 void f_terminate(){
-    if (!init){
+    
+    if (!fat_init){
         return;
     }
     fseek(disk, BLOCKSIZE, SEEK_SET);
@@ -443,35 +571,83 @@ void f_terminate(){
 
     free(sb);
     free(fat_table);
+    free(current_directory);
+
+    sb = NULL;
+    fat_table = NULL;
+    current_directory = NULL;
+
     fclose(disk);
+}
+
+
+test_fopen1(){
+
+    f_init("DISK");
+    file * h1 = f_open("/f1.txt", WRITE_ONLY);
+    file * h2 = f_open("/f2.txt", WRITE_ONLY);
+    file * h3 = f_open("/f3.txt", WRITE_ONLY);
+    file * h4 = f_open("/f4.txt", WRITE_ONLY);
+    file * h5 = f_open("/f5.txt", WRITE_ONLY);
+    file * h6 = f_open("/f6.txt", WRITE_ONLY);
+    file * h7 = f_open("/f7.txt", WRITE_ONLY);
+    file * h8 = f_open("/f8.txt", WRITE_ONLY);
+    file * h9 = f_open("/f9.txt", WRITE_ONLY);
+    file * h10 = f_open("/f10.txt", WRITE_ONLY);
+    file * h11 = f_open("/f11.txt", WRITE_ONLY);
+    file * h12 = f_open("/f12.txt", WRITE_ONLY);
+    file * h13 = f_open("/f13.txt", WRITE_ONLY);
+    file * h14 = f_open("/f14.txt", WRITE_ONLY);
+    file * h15 = f_open("/f15.txt", WRITE_ONLY);
+
+    assert(f_open("/f15.txt", WRITE_ONLY) == NULL );
+
+}
+
+test_fopen(){
+
+    f_init("DISK");
+    file * h1 = f_open("/f1.txt", READ_ONLY);
+    file * h2 = f_open("/f2.txt", WRITE_ONLY);
+    file * h3 = f_open("/f3.txt", WRITE_ONLY);
+
+    assert(h1 == NULL );
+    assert(h2 != NULL );
+    assert(h3 != NULL );
+
 }
 
 int main(){ 
 
-    f_init(SUPERUSER, "DISK");
+    uid = SUPERUSER;
+
+    f_init("DISK");
 
     file * h1 = f_open("/f1.txt", WRITE_ONLY);
 
-    file * h2 = f_open("/f2.txt", WRITE_ONLY);
+    //file * h2 = f_open("/f2.txt", WRITE_ONLY);
 
 
     char *buffer = "I like green apples. I like yellow apples. I like blue apples. I like purple apples. I like orange apples. I like pink apples. I like black apples. I like white apples. I like brown apples. I like grey apples. I like silver apples. I like gold apples. I like copper apples. I like bronze apples. I like brass apples. I like aluminum apples. I like iron apples. I like zebra apples. I like melon apples. I like watermelon apples. I like cantaloupe apples. I like honeydew apples. I like strawberry apples. I like raspberry apples. I like blueberry apples. I like blackberry apples. I like cranberry apples. I like cherry apples. I like peach apples. I like pear apples. I like plum apples. I like grape apples. I like kiwi apples. I like pineapple apples. I like mango apples. I like papaya apples. I like banana apples. I like coconut apples. I like orange apples. I like lemon apples. I like lime apples. I like grapefruit apples. I like tangerine apples. I like clementine apples. I like mandarin apples. I like kumquat apples. I like persimmon apples. I like pomegranate apples. I like avocado apples. I like olive apples. I like tomato apples. I like cucumber apples. I like zucchini apples. I like squash apples. I like pumpkin apples. I like eggplant apples. I like pepper apples. I like onion apples. I like garlic apples. I like ginger apples. I like turmeric apples. I like cinnamon apples. I like nutmeg apples. I like clove apples. I like allspice apples. I like cumin apples. I like coriander apples. I like cardamom apples. I like mustard apples. I like horseradish apples. I like wasabi apples. I like jalapeno apples. I like habanero apples. I like ghost apples. I like scorpion apples. I like reaper apples. I like cayenne apples. I like paprika apples. I like chili apples. I like pepper apples. I like salt apples. I like sugar apples. I like honey apples. I like syrup apples. I like molasses apples. I like caramel apples. I like chocolate apples. I like vanilla apples. I like coffee apples. I like tea apples. I like milk apples. I like cream apples. I like butter apples. I like cheese apples. I like yogurt apples. I like ice cream apples. I like sorbet apples. I like sherbet apples. I like gelato apples. I like custard apples. I like pudding apples. I like jello apples. I like mousse apples. I like souffle apples. I like cake apples. I like pie apples. I like tart apples. I like c";
 
     char *reader = (char *)malloc(strlen(buffer));
+    memset(reader, INITIALIZE, strlen(buffer)); 
 
-    //f_write(buffer, 1, strlen(buffer), h1);
+    f_write(buffer, 1, strlen(buffer), h1);
 
     //f_write(buffer, 1, strlen(buffer), h2);
 
-    f_read((void *) reader, 1, 510, h1);
+    //f_read((void *) reader, 1, 510, h1);
+
 
     printf("%s\n", reader);
 
     f_close(h1);
 
-    f_close(h2);
+    //f_close(h2);
 
     f_terminate();
 
     return SUCCESS;
 }
+
