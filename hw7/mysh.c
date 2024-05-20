@@ -394,12 +394,6 @@ int builtin_cmd_handler(char** command) {
         list_dir(command);
         return SUCCESS;
     }
-    /*chmod changes the permissions mode of a file. 
-    Support absolute mode and symbolic mode.*/
-    if (strcmp(command[0], "chmod") == 0) {
-        chmod_file(command);
-        return SUCCESS;
-    }
     /*mkdir creates a directory*/
     if (strcmp(command[0], "mkdir") == 0) {
         mkdir_shell(command);
@@ -418,7 +412,14 @@ int builtin_cmd_handler(char** command) {
         cd(command);
         return SUCCESS;
     }
-    //pwd prints the current working directory
+    /*chmod changes the permissions mode of a file. 
+    Support absolute mode and symbolic mode.
+    if (strcmp(command[0], "chmod") == 0) {
+        shell_chmod(command);
+        return SUCCESS;
+    }
+    
+    pwd prints the current working directory
     if (strcmp(command[0], "pwd") == 0) {
         pwd(command);
         return SUCCESS;
@@ -440,11 +441,9 @@ int builtin_cmd_handler(char** command) {
         //TODO
         remove_file(command);
         return SUCCESS;
-    }
+    }*/
     return FAIL;
 }
-
-
 
 int check_redirection(char** command, int* in_fd, int* out_fd) {
     if (command == NULL) {

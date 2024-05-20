@@ -65,7 +65,7 @@ void format(const char *filename, int mb) {
     
     for (int i=0; i<15; i++){
         tmp->files[i].init = FALSE;
-        strncpy(tmp->files[i].name, "filename 00", 12);
+        strncpy(tmp->files[i].name, "name 00", 12);
         tmp->files[i].first_FAT = -1;
         tmp->files[i].parent_FAT = -1;
         tmp->files[i].size = 0;

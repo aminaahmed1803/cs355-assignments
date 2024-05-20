@@ -32,27 +32,13 @@ int disk_int(){
         exiting();
     }   
 
-    //assert(current_directory != NULL);
-
-    return SUCCESS;
-}
-
-/*ls lists all the files in the current or specified directory. Support flags -F and -l.*/
-int list_dir(char **command){
-    //go through current directoruy and list according to flag present in command
-    // or of the sub dir and parents
-    return SUCCESS;
-}
-
-int chmod_file(char **command){
-    //get handle for specified file
-    //changge permissions of file in header
     return SUCCESS;
 }
 
 int mkdir_shell(char **command){
     //make dir in current directory
     //if there are 15 then return error
+    f_mkdir(command[1]);
     return SUCCESS;
 }
 
@@ -60,28 +46,42 @@ int rmdir_shell(char **command){
 
     //if nothin is in the directory then error
     //else remove the directory
+    f_rmdir(command[1]);
     return SUCCESS;
 }
 
 int cd(char **command){
     //change current directory to specified directory
     //handle cd . and ..
+    int idx = -1;
+    for (int i=0; i<current_directory->items; i++){    
+        if (strcmp(command[1], current_directory->files[i].name) == 0){
+            if (uid==SUPERUSER || (uid==USER && current_directory->files[i].uid==USER) ){
+                idx = i;
+                break;
+            }else{
+                printf("access not granted\n");
+                return FAIL;
+            }
+        }
+    }
+
+    if (idx == -1){
+        printf("directory not found\n");
+        return FAIL;
+    }
+
+    dir_header *temp = (dir_header *)malloc(sizeof(dir_header));
+    fseek(disk, sb->data_offset + (idx * BLOCKSIZE), SEEK_SET);
+    fread(temp, sizeof(dir_header), 1, disk);
+
+    free(current_directory);
+    current_directory = NULL;
+    current_directory = temp;
+    
     return SUCCESS;
 }
 
-int pwd(char **command){
-    //print current directory path
-    return SUCCESS;
-}
-
-int cat(char **command) {
-
-    return SUCCESS;
-}
-
-int more(char **command) {
-    return SUCCESS;
-}
 
 int remove_file(char **command) {
     //remove a file in current directory

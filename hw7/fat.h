@@ -92,6 +92,7 @@ typedef struct file_handle{
 typedef struct dir_handle { 
     char name[12];
     u_int8_t uid; 
+    u_int8_t mode;
     u_int32_t items; 
     u_int16_t first_FAT; 
     u_int32_t idx;
@@ -109,7 +110,6 @@ typedef struct file_header {
     u_int16_t dir_FAT; //2
     u_int16_t total_blocks; //2
     u_int32_t size; //4
-    u_int16_t unused; //2
     char buffer[480]; //480
 }file_header;
 
@@ -145,13 +145,13 @@ int f_remove(char *pathname);
 dir *f_opendir(char *name);
 dir_entry *f_readdir(dir *directory);
 int f_closedir(dir *stream);
-int f_mkdir(char *pathname, char *mode);
+int f_mkdir(char *pathname);
 int f_rmdir(char *pathname);
 void f_terminate();
 
 int disk_int();
 int list_dir(char **command);
-int chmod_file(char **command);
+int shell_chmod(char **command);
 int mkdir_shell(char **command);
 int rmdir_shell(char **command);
 int cd(char **command);

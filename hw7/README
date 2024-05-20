@@ -1,0 +1,61 @@
+NAME:
+=====
+	Amina Ahmed
+	
+How to Compile:
+===============
+    make mysh 
+
+    make format
+
+    make test
+       
+How to Run:
+===========
+    ./mysh
+
+    ./format DISK -s 1
+
+    ./test
+	
+Implementation Details:
+=======================
+1. File System Library
+    a. f_open - can open a file. if file does not exit, and mode is WRITE_ONLY, a file will be created
+    b. f_read - will read the specified number of bytes if the mode of the handle is READ_ONLY or READ_WRITE
+    c. f_read - will write the specified number of bytes if the mode of the handle is READ_WRITE or WRITE_ONLY
+    d. f_close - closes a file
+    e. f_seek - not implemented
+    f. f_rewind - not implemented
+    g. f_stat - 
+    h. f_remove -
+    i. f_opendir
+    j. f_readdir -
+    k. f_closedir - 
+    l. f_mkdir - 
+    m. f_rmdir - 
+
+2. The Shell 
+    on start up the shell can look for DISK where the file system is located. if "DISK" not found is prints our message asking to run format
+    it mounts itself on root directory once it has found the file system
+    it displays a log in prompt, allowing you to log in as either a SUPERUSER or a REGULAR USER
+    it supports redirection of shell commands but not built in commands
+
+    Buiiltin Cmds that Work: 
+    a. ls 
+    c. mkdir 
+    d. rmdir 
+    e. cd 
+    i. rm 
+
+3. MISC
+    the format utility file works as specified in the assignment document. 
+
+Special Instructions to the grader:
+===================================
+As needed -- but generally your code should need no special instructions
+
+Known Bugs or Limitations:
+==========================
+    As needed.  Being forthcoming about bugs is good.  An effective bug analysis will reduce the
+    penalty for having that bug by up to 50%.
