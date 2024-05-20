@@ -7,7 +7,7 @@
 int main() {
 
     uid = SUPERUSER;
-    f_init("DISK");
+    assert(f_init("DISK") == 0);
 
     file *h1 = f_open("/file_1", WRITE_ONLY);
     file *h2 = f_open("/file_2", WRITE_ONLY);

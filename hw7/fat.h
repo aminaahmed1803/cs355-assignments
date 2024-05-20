@@ -151,13 +151,8 @@ void f_terminate();
 
 int disk_int();
 int list_dir(char **command);
-int shell_chmod(char **command);
 int mkdir_shell(char **command);
 int rmdir_shell(char **command);
 int cd(char **command);
-int pwd(char **command);
-int cat(char **command);
-int more(char **command);
-int remove_file(char **command);
 
 #endif 

@@ -1,14 +1,25 @@
 NAME:
 =====
 	Amina Ahmed
-	
+
+DESIGN DETAILS:
+===============
+The format function creates a FAT 16 disk image. The disk can be upto 50 MB big and should work fine with the librabry. 
+The fat librabry can be used to read and write to the disk. It can make and remove files. It can also make and remove 
+directories. The file system is mounted on the root directory. It supports a hierarchical directory structure and can 
+differentiate between files and directories created by either a regualar user or a super user. The super user can access
+all files and directories. The regular user can only access files and directories created by them. 
+The shell is pretty simple. It can run built in commands and can redirect output. It can also run the file system functions.
+It has only a few of the specified builtin commands implemented. However, these commands are not implemented fully. 
+
 How to Compile:
 ===============
     make mysh 
-
     make format
-
-    make test
+    make test1
+    make test2
+    make test3
+    
        
 How to Run:
 ===========
@@ -16,24 +27,38 @@ How to Run:
 
     ./format DISK -s 1
 
-    ./test
-	
+    ./test1
+
+    ./test2
+
+    ./test3
+
 Implementation Details:
 =======================
-1. File System Library
-    a. f_open - can open a file. if file does not exit, and mode is WRITE_ONLY, a file will be created
-    b. f_read - will read the specified number of bytes if the mode of the handle is READ_ONLY or READ_WRITE
-    c. f_read - will write the specified number of bytes if the mode of the handle is READ_WRITE or WRITE_ONLY
-    d. f_close - closes a file
+1. File System Library Funtions
+    a. f_open - implemented and tested
+    b. f_read - implemented and tested
+    c. f_read - implemented and tested
+    d. f_close - implemented and tested
+    l. f_mkdir - implemented and tested
+    m. f_rmdir - implemented and tested
+
+    h. f_remove - implemented
+    i. f_opendir - implemented
+    j. f_readdir - implemented
+    k. f_closedir - implemented
+
     e. f_seek - not implemented
     f. f_rewind - not implemented
-    g. f_stat - 
-    h. f_remove -
-    i. f_opendir
-    j. f_readdir -
-    k. f_closedir - 
-    l. f_mkdir - 
-    m. f_rmdir - 
+    g. f_stat - not implemented 
+
+Test Descriptions
+------------------
+1. test_dir.c - makes and removes directories in DISK
+2. test_fopen.c - opens multiple files in different modes. creates many files to test space limits
+3. test_write_read.c - writes files of different sizes and then tries different number of bights from them    
+
+The tested file system functions work almost perfectly. The tests are made to test their robustness. Before running each test make sure run ./format DISK -s 1 so the tests work properly. 
 
 2. The Shell 
     on start up the shell can look for DISK where the file system is located. if "DISK" not found is prints our message asking to run format
@@ -46,16 +71,13 @@ Implementation Details:
     c. mkdir 
     d. rmdir 
     e. cd 
-    i. rm 
+
+    These commands are the only ones integrated with the file library but they do not work perfectly
 
 3. MISC
-    the format utility file works as specified in the assignment document. 
+    the format utility file works as specified in the assignment document. it will creat a DISK of upto 50 MB. 
 
-Special Instructions to the grader:
-===================================
-As needed -- but generally your code should need no special instructions
 
 Known Bugs or Limitations:
 ==========================
-    As needed.  Being forthcoming about bugs is good.  An effective bug analysis will reduce the
-    penalty for having that bug by up to 50%.
+    certain file library functions do not work as expected and have memory issues. 
